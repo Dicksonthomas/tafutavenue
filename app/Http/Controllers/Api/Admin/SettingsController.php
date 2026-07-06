@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class SettingsController extends Controller
@@ -35,7 +34,7 @@ class SettingsController extends Controller
         return response()->json([
             'primary_color' => $primaryColor,
             'default_color' => $settings->primary_color,
-            'logo_url' => $settings->logo_path ? Storage::disk('public')->url($settings->logo_path) : null,
+            'logo_url' => $settings->logo_path,
         ]);
     }
 
@@ -57,10 +56,9 @@ class SettingsController extends Controller
         }
 
         if ($request->hasFile('logo')) {
-            if ($settings->logo_path) {
-                Storage::disk('public')->delete($settings->logo_path);
-            }
-            $settings->logo_path = $request->file('logo')->store('branding', 'public');
+            $file = $request->file('logo');
+            $base64 = base64_encode(file_get_contents($file->getRealPath()));
+            $settings->logo_path = 'data:'.$file->getMimeType().';base64,'.$base64;
         }
 
         $settings->save();
@@ -68,7 +66,7 @@ class SettingsController extends Controller
         return response()->json([
             'message' => 'Mipangilio imehifadhiwa.',
             'primary_color' => $settings->primary_color,
-            'logo_url' => $settings->logo_path ? Storage::disk('public')->url($settings->logo_path) : null,
+            'logo_url' => $settings->logo_path,
         ]);
     }
 }
