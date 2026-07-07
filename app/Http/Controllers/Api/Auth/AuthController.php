@@ -99,7 +99,7 @@ class AuthController extends Controller
 
         if (! Auth::attempt($credentials)) {
             return response()->json([
-                'message' => 'Taarifa za kuingia si sahihi (email au password si sahihi).',
+                'message' => 'Invalid username or password. Note that both fields may be case-sensitive.',
             ], 401);
         }
 
