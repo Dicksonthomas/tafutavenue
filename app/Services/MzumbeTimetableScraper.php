@@ -50,7 +50,7 @@ class MzumbeTimetableScraper
                     ]
                 );
 
-                foreach ($this->parseVenueSchedule($html) as $entry) {
+                foreach ($this->parseVenueSchedule($html, $venueInfo['name']) as $entry) {
                     $exists = TimetableSlot::where('venue_id', $venue->id)
                         ->where('semester_id', $semester->id)
                         ->where('day_of_week', $entry['day'])
@@ -134,13 +134,21 @@ class MzumbeTimetableScraper
         return count($parts) > 1 ? trim($parts[0]) : null;
     }
 
+    private function cleanProgram(string $raw): ?string
+    {
+        $candidate = trim(preg_replace('/\(#\d+\)/', '', trim($raw)));
+        $candidate = trim(preg_replace('/\s+/', ' ', $candidate));
+
+        return $candidate !== '' ? $candidate : null;
+    }
+
     /**
      * Chakata jedwali la ratiba la venue moja (siku x muda), tukizingatia
      * rowspan (idadi ya masaa) ya kila kiini chenye somo.
      *
      * @return array<int, array{day: string, start_time: string, end_time: string, course_unit: ?string, lecturer_name: ?string, program: ?string}>
      */
-    private function parseVenueSchedule(string $html): array
+    private function parseVenueSchedule(string $html, string $venueName): array
     {
         $dom = new \DOMDocument;
         libxml_use_internal_errors(true);
@@ -204,9 +212,7 @@ class MzumbeTimetableScraper
                 $program = null;
                 $afterCourse = preg_replace('/^'.preg_quote($courseUnit, '/').'/', '', $cellText);
                 if (preg_match('/^\s*(.*?)\s*Venue\s/', $afterCourse, $pm)) {
-                    $candidate = trim(preg_replace('/\(#\d+\)/', '', trim($pm[1])));
-                    $candidate = trim(preg_replace('/\s+/', ' ', $candidate));
-                    $program = $candidate !== '' ? $candidate : null;
+                    $program = $this->cleanProgram($pm[1]);
                 }
 
                 $lecturer = null;
@@ -215,6 +221,21 @@ class MzumbeTimetableScraper
                     $names = array_map('trim', $names);
                     $names = array_values(array_filter($names, fn ($n) => $n !== ''));
                     $lecturer = $names ? implode(', ', $names) : null;
+                }
+
+                // Baadhi ya campus (Dar es Salaam, Tanga, Mbeya) hazitumii maneno
+                // "Venue"/"Lecturer" kwenye kiini cha ratiba - mfano:
+                // "ACC 121T BAF-BS 1A(#100) CR10 (#108) MR. KISHAMBA" - jina la
+                // venue lenyewe (pamoja na #id yake) ndilo linalotenganisha
+                // program (kabla yake) na lecturer (baada yake).
+                if (($program === null || $lecturer === null)
+                    && preg_match('/^\s*(.*?)\s*'.preg_quote($venueName, '/').'\s*\(#\d+\)\s*(.*)$/iu', $afterCourse, $vm)) {
+                    if ($program === null) {
+                        $program = $this->cleanProgram($vm[1]);
+                    }
+                    if ($lecturer === null) {
+                        $lecturer = trim($vm[2]) !== '' ? trim($vm[2]) : null;
+                    }
                 }
 
                 $endTime = $this->addHours($hourStart, $rowspan);

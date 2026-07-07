@@ -9,6 +9,8 @@ class AppSetting extends Model
     protected $fillable = [
         'primary_color',
         'logo_path',
+        'app_name',
+        'support_phone',
     ];
 
     protected $attributes = [

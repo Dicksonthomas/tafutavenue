@@ -76,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/reports/summary', [ReportController::class, 'summary']);
         Route::get('/reports/venues/{venue}', [ReportController::class, 'venueUsage']);
+        Route::get('/reports/bookings/export', [ReportController::class, 'exportBookings']);
 
         Route::get('/users', [UserAdminController::class, 'index']);
         Route::post('/users', [UserAdminController::class, 'store']);
@@ -88,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/admins', [AdminUserController::class, 'index']);
         Route::post('/admins', [AdminUserController::class, 'store']);
+        Route::put('/admins/{admin}', [AdminUserController::class, 'update']);
         Route::delete('/admins/{admin}', [AdminUserController::class, 'destroy']);
     });
 });

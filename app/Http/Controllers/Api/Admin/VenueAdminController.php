@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\TimetableSlot;
 use App\Models\Venue;
 use Illuminate\Http\JsonResponse;
@@ -54,6 +55,8 @@ class VenueAdminController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        ActivityLog::record($request->user()->id, 'venue_created', "{$request->user()->name} added a new venue: {$venue->name}.");
+
         return response()->json($venue, 201);
     }
 
@@ -78,12 +81,17 @@ class VenueAdminController extends Controller
 
         $venue->update($data);
 
+        ActivityLog::record($request->user()->id, 'venue_updated', "{$request->user()->name} updated venue {$venue->name}.");
+
         return response()->json($venue);
     }
 
-    public function destroy(Venue $venue): JsonResponse
+    public function destroy(Request $request, Venue $venue): JsonResponse
     {
+        $venueName = $venue->name;
         $venue->delete();
+
+        ActivityLog::record($request->user()->id, 'venue_deleted', "{$request->user()->name} deleted venue {$venueName}.");
 
         return response()->json(['message' => 'Venue imefutwa.']);
     }

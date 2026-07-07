@@ -180,6 +180,13 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'cancelled']);
 
+        ActivityLog::record(
+            $request->user()->id,
+            'booking_cancelled',
+            "{$request->user()->name} cancelled their booking of {$booking->venue->name} on ".Carbon::parse($booking->booking_date)->format('d/m/Y').'.',
+            $booking->id
+        );
+
         return response()->json($booking);
     }
 }

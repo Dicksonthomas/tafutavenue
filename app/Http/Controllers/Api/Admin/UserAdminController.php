@@ -98,6 +98,8 @@ class UserAdminController extends Controller
 
         Mail::to($user->email)->queue(new CrCredentialsMail($user, $plainPassword));
 
+        ActivityLog::record($request->user()->id, 'cr_created', "{$request->user()->name} registered a new CR: {$user->name}.");
+
         return response()->json([
             'user' => $user,
             'message' => "CR ameongezwa. Password imetumwa kwenye email: {$user->email}",
@@ -256,6 +258,8 @@ class UserAdminController extends Controller
             $passwordForEmail = $newPassword ?? '(hujabadilisha - tumia password uliyokuwa nayo)';
             Mail::to($user->email)->queue(new CrCredentialsMail($user, $passwordForEmail));
         }
+
+        ActivityLog::record($request->user()->id, 'cr_updated', "{$request->user()->name} updated CR {$user->name}'s details.");
 
         return response()->json([
             'user' => $user,

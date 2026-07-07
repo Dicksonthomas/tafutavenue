@@ -9,6 +9,7 @@ use App\Models\Venue;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
@@ -90,6 +91,50 @@ class ReportController extends Controller
             'venue' => $venue,
             'total_bookings' => $bookings->count(),
             'bookings' => $bookings,
+        ]);
+    }
+
+    /**
+     * Pakua ripoti ya bookings zote (CSV), ikichujwa na status/date/venue kama
+     * inavyofanya BookingAdminController::index.
+     */
+    public function exportBookings(Request $request): StreamedResponse
+    {
+        $bookings = Booking::with(['user:id,name,email,program', 'venue:id,name,campus'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
+            ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))
+            ->orderByDesc('booking_date')
+            ->orderByDesc('start_time')
+            ->get();
+
+        $filename = 'bookings_report.csv';
+
+        $callback = function () use ($bookings) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['#', 'Venue', 'Campus', 'Date', 'Start', 'End', 'Booked By', 'Email', 'Program', 'Purpose', 'Status']);
+
+            foreach ($bookings as $i => $b) {
+                fputcsv($handle, [
+                    $i + 1,
+                    $b->venue?->name,
+                    $b->venue?->campus,
+                    $b->booking_date?->format('Y-m-d'),
+                    $b->start_time,
+                    $b->end_time,
+                    $b->user?->name,
+                    $b->user?->email,
+                    $b->user?->program,
+                    $b->purpose,
+                    $b->status,
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
         ]);
     }
 }

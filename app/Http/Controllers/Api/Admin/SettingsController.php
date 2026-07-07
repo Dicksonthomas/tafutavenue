@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,19 +36,29 @@ class SettingsController extends Controller
             'primary_color' => $primaryColor,
             'default_color' => $settings->primary_color,
             'logo_url' => $settings->logo_path,
+            'app_name' => $settings->app_name,
+            'support_phone' => $settings->support_phone,
         ]);
     }
 
     /**
      * Admin anabadilisha rangi kuu (default) ya mfumo na/au logo ya App.
      * Logo si ya lazima - Admin anaweza kubadilisha rangi tu bila kugusa logo.
+     * Jina la App na namba ya msaada (support phone) ni Super Admin PEKEE
+     * anayeweza kuvibadilisha.
      */
     public function update(Request $request): JsonResponse
     {
         $data = $request->validate([
             'primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'logo' => ['nullable', 'image', 'max:2048'],
+            'app_name' => ['nullable', 'string', 'max:255'],
+            'support_phone' => ['nullable', 'string', 'max:50'],
         ]);
+
+        if (($request->filled('app_name') || $request->filled('support_phone')) && ! $request->user()->isSuperAdmin()) {
+            abort(403, 'Super Admin pekee anaweza kubadilisha Jina la App/Namba ya Msaada.');
+        }
 
         $settings = AppSetting::current();
 
@@ -61,12 +72,24 @@ class SettingsController extends Controller
             $settings->logo_path = 'data:'.$file->getMimeType().';base64,'.$base64;
         }
 
+        if ($request->filled('app_name')) {
+            $settings->app_name = $data['app_name'];
+        }
+
+        if ($request->filled('support_phone')) {
+            $settings->support_phone = $data['support_phone'];
+        }
+
         $settings->save();
+
+        ActivityLog::record($request->user()->id, 'settings_updated', "{$request->user()->name} updated the system settings.");
 
         return response()->json([
             'message' => 'Mipangilio imehifadhiwa.',
             'primary_color' => $settings->primary_color,
             'logo_url' => $settings->logo_path,
+            'app_name' => $settings->app_name,
+            'support_phone' => $settings->support_phone,
         ]);
     }
 }
