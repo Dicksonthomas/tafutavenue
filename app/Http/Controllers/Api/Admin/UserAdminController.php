@@ -93,7 +93,7 @@ class UserAdminController extends Controller
             'role' => 'cr',
         ]);
 
-        Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+        Mail::to($user->email)->queue(new CrCredentialsMail($user, $plainPassword));
 
         return response()->json([
             'user' => $user,
@@ -178,7 +178,7 @@ class UserAdminController extends Controller
                 'role' => 'cr',
             ]);
 
-            Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+            Mail::to($user->email)->queue(new CrCredentialsMail($user, $plainPassword));
 
             $created[] = [
                 'name' => $user->name,
@@ -250,7 +250,8 @@ class UserAdminController extends Controller
         $emailChanged = isset($data['email']) && $data['email'] !== $oldEmail;
 
         if ($emailChanged || $newPassword) {
-            Mail::to($user->email)->send(new CrCredentialsMail($user, $newPassword ?? '(hujabadilisha - tumia password uliyokuwa nayo)'));
+            $passwordForEmail = $newPassword ?? '(hujabadilisha - tumia password uliyokuwa nayo)';
+            Mail::to($user->email)->queue(new CrCredentialsMail($user, $passwordForEmail));
         }
 
         return response()->json([

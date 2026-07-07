@@ -133,7 +133,7 @@ class BookingController extends Controller
             $booking->id
         );
 
-        Mail::to($booking->user->email)->send(new BookingConfirmedMail($booking));
+        Mail::to($booking->user->email)->queue(new BookingConfirmedMail($booking));
 
         return response()->json($booking, 201);
     }
