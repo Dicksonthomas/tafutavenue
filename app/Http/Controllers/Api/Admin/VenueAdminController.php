@@ -22,6 +22,7 @@ class VenueAdminController extends Controller
                         ->orWhere('building', 'like', "%{$q}%");
                 });
             })
+            ->when($request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
             ->orderBy('name')
             ->paginate(30);
 
@@ -35,6 +36,7 @@ class VenueAdminController extends Controller
             'code' => ['nullable', 'string', 'max:50', 'unique:venues,code'],
             'building' => ['nullable', 'string', 'max:255'],
             'faculty' => ['nullable', 'string', 'max:255'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'capacity' => ['required', 'integer', 'min:0'],
             'type' => ['required', Rule::in(['lecture_hall', 'laboratory', 'seminar_room', 'hall', 'other'])],
             'description' => ['nullable', 'string'],
@@ -62,6 +64,7 @@ class VenueAdminController extends Controller
             'code' => ['sometimes', 'nullable', 'string', 'max:50', Rule::unique('venues', 'code')->ignore($venue->id)],
             'building' => ['sometimes', 'nullable', 'string', 'max:255'],
             'faculty' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'campus' => ['sometimes', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'capacity' => ['sometimes', 'integer', 'min:0'],
             'type' => ['sometimes', Rule::in(['lecture_hall', 'laboratory', 'seminar_room', 'hall', 'other'])],
             'status' => ['sometimes', Rule::in(['available', 'maintenance', 'disabled'])],
@@ -91,9 +94,14 @@ class VenueAdminController extends Controller
      */
     public function timetableStatus(Request $request): JsonResponse
     {
-        $request->validate(['semester_id' => ['required', 'exists:semesters,id']]);
+        $request->validate([
+            'semester_id' => ['required', 'exists:semesters,id'],
+            'campus' => ['nullable', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+        ]);
 
-        $count = TimetableSlot::where('semester_id', $request->integer('semester_id'))->count();
+        $count = TimetableSlot::where('semester_id', $request->integer('semester_id'))
+            ->when($request->filled('campus'), fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $request->string('campus'))))
+            ->count();
 
         return response()->json(['existing_slots' => $count]);
     }
@@ -111,12 +119,17 @@ class VenueAdminController extends Controller
     {
         $request->validate([
             'semester_id' => ['required', 'exists:semesters,id'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'file' => ['required', 'file', 'mimes:csv,txt'],
             'mode' => ['nullable', 'in:add,replace'],
         ]);
 
+        $campus = $request->string('campus')->toString();
+
         if ($request->input('mode') === 'replace') {
-            TimetableSlot::where('semester_id', $request->integer('semester_id'))->delete();
+            TimetableSlot::where('semester_id', $request->integer('semester_id'))
+                ->whereHas('venue', fn ($q) => $q->where('campus', $campus))
+                ->delete();
         }
 
         $handle = fopen($request->file('file')->getRealPath(), 'r');
@@ -128,7 +141,7 @@ class VenueAdminController extends Controller
             $line = array_combine($header, $row);
 
             $venue = Venue::firstOrCreate(
-                ['code' => $line['venue_code'] ?: null, 'name' => $line['venue_name']],
+                ['code' => $line['venue_code'] ?: null, 'name' => $line['venue_name'], 'campus' => $campus],
                 [
                     'building' => $line['building'] ?? null,
                     'capacity' => $line['capacity'] ?? 0,

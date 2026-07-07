@@ -8,6 +8,7 @@ use App\Models\TimetableSlot;
 use App\Services\MzumbeTimetableScraper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TimetableImportController extends Controller
 {
@@ -23,6 +24,7 @@ class TimetableImportController extends Controller
     {
         $data = $request->validate([
             'semester_id' => ['required', 'exists:semesters,id'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'url' => ['required', 'url'],
             'mode' => ['nullable', 'in:add,replace'],
         ]);
@@ -30,11 +32,13 @@ class TimetableImportController extends Controller
         $semester = Semester::findOrFail($data['semester_id']);
 
         if (($data['mode'] ?? 'add') === 'replace') {
-            TimetableSlot::where('semester_id', $semester->id)->delete();
+            TimetableSlot::where('semester_id', $semester->id)
+                ->whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
+                ->delete();
         }
 
         try {
-            $result = $scraper->importFromUrl($data['url'], $semester);
+            $result = $scraper->importFromUrl($data['url'], $semester, $data['campus']);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

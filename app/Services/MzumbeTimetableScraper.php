@@ -17,7 +17,7 @@ class MzumbeTimetableScraper
      *
      * @return array{venues: int, slots_created: int}
      */
-    public function importFromUrl(string $baseUrl, Semester $semester, ?callable $onProgress = null): array
+    public function importFromUrl(string $baseUrl, Semester $semester, string $campus, ?callable $onProgress = null): array
     {
         $baseUrl = rtrim($baseUrl, '/').'/';
 
@@ -40,7 +40,7 @@ class MzumbeTimetableScraper
 
             if ($html) {
                 $venue = Venue::firstOrCreate(
-                    ['name' => $venueInfo['name']],
+                    ['name' => $venueInfo['name'], 'campus' => $campus],
                     [
                         'building' => $this->guessBuilding($venueInfo['name']),
                         'capacity' => $venueInfo['capacity'],
@@ -108,7 +108,7 @@ class MzumbeTimetableScraper
         $section = substr($indexHtml, $pos);
 
         preg_match_all(
-            '/<a href="([^"]+\.htm)"[^>]*>Venue:\s*([^<(]+)\s*\(#(\d+)\)<\/a>/',
+            '/<a href="([^"]+\.htm)"[^>]*>(?:Venue:\s*)?([^<(]+?)\s*\(#(\d+)\)<\/a>/',
             $section,
             $matches,
             PREG_SET_ORDER

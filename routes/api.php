@@ -22,6 +22,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/settings', [SettingsController::class, 'show']);
+Route::get('/reference/campuses', [ReferenceDataController::class, 'campuses']);
 Route::get('/reference/faculties', [ReferenceDataController::class, 'faculties']);
 Route::get('/reference/departments', [ReferenceDataController::class, 'departments']);
 Route::get('/reference/programs', [ReferenceDataController::class, 'programs']);

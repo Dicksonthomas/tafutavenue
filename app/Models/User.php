@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'campus',
         'faculty',
         'department',
         'program',

@@ -75,7 +75,7 @@ class BookingController extends Controller
 
         if (! $venue->allowsUser($request->user())) {
             return response()->json([
-                'message' => "Venue {$venue->name} ina masharti maalum (level/department) ambayo huna ruhusa nayo.",
+                'message' => "Venue {$venue->name} ina masharti maalum (campus/level/department) ambayo huna ruhusa nayo.",
             ], 403);
         }
 

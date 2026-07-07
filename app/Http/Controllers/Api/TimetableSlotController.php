@@ -22,6 +22,7 @@ class TimetableSlotController extends Controller
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         $slots = TimetableSlot::with('venue')
+            ->whereHas('venue', fn ($q) => $q->where('campus', $request->user()->campus))
             ->where('lecturer_name', 'like', '%'.$data['name'].'%')
             ->get()
             ->sortBy([

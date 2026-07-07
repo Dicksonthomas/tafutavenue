@@ -5,9 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\TimetableSlot;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ReferenceDataController extends Controller
 {
+    private const CAMPUSES = [
+        ['value' => 'morogoro_main', 'label' => 'Morogoro Main'],
+        ['value' => 'dar_es_salaam', 'label' => 'Dar es Salaam'],
+        ['value' => 'tanga', 'label' => 'Tanga'],
+        ['value' => 'mbeya', 'label' => 'Mbeya'],
+    ];
+
     private const FACULTIES = [
         ['value' => 'FST', 'label' => 'FST - Faculty of Science and Technology'],
         ['value' => 'FOL', 'label' => 'FOL - Faculty of Law'],
@@ -33,6 +41,11 @@ class ReferenceDataController extends Controller
         'PhD' => 2,
     ];
 
+    public function campuses(): JsonResponse
+    {
+        return response()->json(self::CAMPUSES);
+    }
+
     public function faculties(): JsonResponse
     {
         return response()->json(self::FACULTIES);
@@ -52,9 +65,10 @@ class ReferenceDataController extends Controller
      * Programs halisi zilizovutwa kutoka kwenye timetable ya chuo (course scheduling data),
      * kwa ajili ya dropdown yenye live search kwenye usajili.
      */
-    public function programs(): JsonResponse
+    public function programs(Request $request): JsonResponse
     {
         $programs = TimetableSlot::query()
+            ->when($request->filled('campus'), fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $request->string('campus'))))
             ->whereNotNull('program')
             ->where('program', '!=', '')
             ->distinct()

@@ -17,13 +17,14 @@ class VenueController extends Controller
      * Muhtasari wa haraka wa siku ya leo - CR akiingia tu anaona idadi ya
      * venues 'free' na 'booked' bila kuchagua chochote.
      */
-    public function todayOverview(): JsonResponse
+    public function todayOverview(Request $request): JsonResponse
     {
+        $campus = $request->user()->campus;
         $today = Carbon::today();
         $dayOfWeek = $today->format('l');
         $semester = Semester::where('is_active', true)->first();
 
-        $totalVenues = Venue::where('status', 'available')->count();
+        $totalVenues = Venue::where('status', 'available')->where('campus', $campus)->count();
 
         $busyVenueIds = collect();
 
@@ -41,7 +42,7 @@ class VenueController extends Controller
                 ->pluck('venue_id')
         )->unique();
 
-        $busyCount = Venue::where('status', 'available')->whereIn('id', $busyVenueIds)->count();
+        $busyCount = Venue::where('status', 'available')->where('campus', $campus)->whereIn('id', $busyVenueIds)->count();
 
         return response()->json([
             'date' => $today->toDateString(),
@@ -59,6 +60,7 @@ class VenueController extends Controller
     public function index(Request $request): JsonResponse
     {
         $venues = Venue::where('status', '!=', 'disabled')
+            ->where('campus', $request->user()->campus)
             ->when($request->filled('q'), function ($query) use ($request) {
                 $q = $request->string('q');
                 $query->where(function ($w) use ($q) {
@@ -109,6 +111,7 @@ class VenueController extends Controller
         $busyIds = $timetableBusyIds->merge($bookingBusyIds)->unique();
 
         $availableVenues = Venue::where('status', 'available')
+            ->where('campus', $request->user()->campus)
             ->whereNotIn('id', $busyIds)
             ->orderBy('name')
             ->get()
@@ -174,13 +177,16 @@ class VenueController extends Controller
         ]);
 
         $dayOfWeek = Carbon::parse($data['date'])->format('l');
+        $campus = $request->user()->campus;
 
         $timetable = TimetableSlot::with('venue')
+            ->whereHas('venue', fn ($q) => $q->where('campus', $campus))
             ->where('day_of_week', $dayOfWeek)
             ->orderBy('start_time')
             ->get();
 
         $bookings = Booking::with(['venue', 'user'])
+            ->whereHas('venue', fn ($q) => $q->where('campus', $campus))
             ->whereDate('booking_date', $data['date'])
             ->whereIn('status', ['pending', 'approved'])
             ->orderBy('start_time')

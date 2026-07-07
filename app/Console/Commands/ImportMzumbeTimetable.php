@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 
 class ImportMzumbeTimetable extends Command
 {
-    protected $signature = 'app:import-mzumbe-timetable {semester_id} {--url=https://mutimetable.mzumbe.ac.tz/timetables/teaching/semestertwo_2025_2026_all_programmes/}';
+    protected $signature = 'app:import-mzumbe-timetable {semester_id} {--url=https://mutimetable.mzumbe.ac.tz/timetables/teaching/semestertwo_2025_2026_all_programmes/} {--campus=morogoro_main}';
 
     protected $description = 'Vuta venues na ratiba ya mihadhara (course/lecturer/muda) kutoka mutimetable.mzumbe.ac.tz na kuziingiza kwenye database';
 
@@ -27,7 +27,7 @@ class ImportMzumbeTimetable extends Command
         $bar = null;
 
         try {
-            $result = $scraper->importFromUrl($this->option('url'), $semester, function () use (&$bar) {
+            $result = $scraper->importFromUrl($this->option('url'), $semester, $this->option('campus'), function () use (&$bar) {
                 $bar?->advance();
             });
         } catch (\RuntimeException $e) {

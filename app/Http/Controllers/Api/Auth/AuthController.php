@@ -33,6 +33,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'reg_no' => ['required', 'string', 'max:50', 'unique:users,reg_no'],
             'phone' => ['required', 'string', 'max:20'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'faculty' => ['required', 'string', 'max:255'],
             'department' => ['required', 'string', 'max:255'],
             'program' => ['required', 'string', 'max:255'],

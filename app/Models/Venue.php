@@ -16,6 +16,7 @@ class Venue extends Model
         'code',
         'building',
         'faculty',
+        'campus',
         'capacity',
         'type',
         'status',
@@ -43,6 +44,10 @@ class Venue extends Model
 
     public function allowsUser(User $user): bool
     {
+        if ($user->role !== 'admin' && $this->campus && $user->campus && $this->campus !== $user->campus) {
+            return false;
+        }
+
         if (! empty($this->restricted_levels) && ! in_array($user->level, $this->restricted_levels, true)) {
             return false;
         }
