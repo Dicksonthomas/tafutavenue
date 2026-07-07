@@ -58,6 +58,8 @@ class UserAdminController extends Controller
             'reg_no' => ['nullable', 'string', 'max:50', 'unique:users,reg_no'],
             'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+            'sex' => ['required', Rule::in(['male', 'female'])],
             'faculty' => ['required', 'string', 'max:255'],
             'department' => ['required', 'string', 'max:255'],
             'program' => ['required', 'string', 'max:255'],
@@ -104,8 +106,8 @@ class UserAdminController extends Controller
      */
     public function downloadTemplate(): StreamedResponse
     {
-        $columns = ['name', 'reg_no', 'phone', 'faculty', 'department', 'program', 'level'];
-        $example = ['Dickson Musa Thomas', '14322055/T.25', '0712345678', 'Faculty of Science', 'Computer Science', 'BSc. Computer Science', 'Degree'];
+        $columns = ['name', 'reg_no', 'phone', 'campus', 'sex', 'faculty', 'department', 'program', 'level'];
+        $example = ['Dickson Musa Thomas', '14322055/T.25', '0712345678', 'morogoro_main', 'male', 'Faculty of Science', 'Computer Science', 'BSc. Computer Science', 'Degree'];
 
         return response()->streamDownload(function () use ($columns, $example) {
             $handle = fopen('php://output', 'w');
@@ -166,6 +168,8 @@ class UserAdminController extends Controller
                 'reg_no' => $line['reg_no'],
                 'email' => $email,
                 'phone' => $line['phone'] ?? null,
+                'campus' => $line['campus'] ?? 'morogoro_main',
+                'sex' => in_array($line['sex'] ?? null, ['male', 'female'], true) ? $line['sex'] : null,
                 'faculty' => $line['faculty'] ?? null,
                 'department' => $line['department'] ?? null,
                 'program' => $line['program'] ?? null,
@@ -206,6 +210,8 @@ class UserAdminController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'phone' => ['sometimes', 'string', 'max:20'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'campus' => ['sometimes', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+            'sex' => ['sometimes', Rule::in(['male', 'female'])],
             'faculty' => ['sometimes', 'string', 'max:255'],
             'department' => ['sometimes', 'string', 'max:255'],
             'program' => ['sometimes', 'string', 'max:255'],
@@ -277,6 +283,7 @@ class UserAdminController extends Controller
             'email' => "deleted-{$user->id}@deleted.local",
             'password' => Hash::make(Str::random(32)),
             'phone' => null,
+            'sex' => null,
             'faculty' => null,
             'department' => null,
             'program' => null,

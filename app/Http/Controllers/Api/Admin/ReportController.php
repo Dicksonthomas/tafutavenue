@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\User;
 use App\Models\Venue;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -60,12 +61,17 @@ class ReportController extends Controller
             ->groupBy('purpose')
             ->pluck('total', 'purpose');
 
+        $crQuery = User::where('role', 'cr');
+
         return response()->json([
             'total_bookings' => (clone $query)->count(),
             'by_status' => $byStatus,
             'by_purpose' => $byPurpose,
             'most_booked_venues' => $mostBookedVenues,
             'total_venues' => Venue::count(),
+            'total_crs' => (clone $crQuery)->count(),
+            'male_crs' => (clone $crQuery)->where('sex', 'male')->count(),
+            'female_crs' => (clone $crQuery)->where('sex', 'female')->count(),
         ]);
     }
 

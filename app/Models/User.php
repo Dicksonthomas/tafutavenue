@@ -28,6 +28,7 @@ class User extends Authenticatable
         'role',
         'phone',
         'campus',
+        'sex',
         'faculty',
         'department',
         'program',
