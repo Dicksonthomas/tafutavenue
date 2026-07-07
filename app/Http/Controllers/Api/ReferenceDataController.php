@@ -72,9 +72,18 @@ class ReferenceDataController extends Controller
             ->whereNotNull('program')
             ->where('program', '!=', '')
             ->distinct()
-            ->orderBy('program')
             ->pluck('program')
-            ->flatMap(fn ($p) => array_map('trim', explode(',', $p)))
+            ->flatMap(function ($p) {
+                // Kwenye timetable, program nyingi zinazoshiriki somo moja
+                // huhifadhiwa zikiwa zimeunganishwa kwa nafasi (siyo comma),
+                // mfano "BAF-BS 1A BAF-BS 1B BSc.ICTB 1" - kila token ni
+                // "KODI MWAKA" (mfano "BSc.ICTB 1" au "BAF-BS 1A").
+                preg_match_all('/[A-Za-z][A-Za-z.\-]*\s+\d+[A-Za-z]?/', $p, $matches);
+
+                return $matches[0] ?: [trim($p)];
+            })
+            ->map(fn ($p) => trim($p))
+            ->filter()
             ->unique()
             ->sort()
             ->values();
