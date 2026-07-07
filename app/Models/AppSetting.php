@@ -13,6 +13,7 @@ class AppSetting extends Model
         'support_phone',
         'footer_text',
         'footer_link',
+        'login_background_color',
     ];
 
     protected $attributes = [

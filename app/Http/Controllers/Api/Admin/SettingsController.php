@@ -40,14 +40,15 @@ class SettingsController extends Controller
             'support_phone' => $settings->support_phone,
             'footer_text' => $settings->footer_text,
             'footer_link' => $settings->footer_link,
+            'login_background_color' => $settings->login_background_color,
         ]);
     }
 
     /**
      * Admin anabadilisha rangi kuu (default) ya mfumo na/au logo ya App.
      * Logo si ya lazima - Admin anaweza kubadilisha rangi tu bila kugusa logo.
-     * Jina la App, namba ya msaada (support phone), na maneno/link ya footer ni
-     * Super Admin PEKEE anayeweza kuvibadilisha.
+     * Jina la App, namba ya msaada (support phone), maneno/link ya footer, na
+     * rangi ya background ya login page ni Super Admin PEKEE anayeweza kuvibadilisha.
      */
     public function update(Request $request): JsonResponse
     {
@@ -58,9 +59,10 @@ class SettingsController extends Controller
             'support_phone' => ['nullable', 'string', 'max:50'],
             'footer_text' => ['nullable', 'string', 'max:255'],
             'footer_link' => ['nullable', 'url', 'max:255'],
+            'login_background_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
-        $superAdminOnlyFields = ['app_name', 'support_phone', 'footer_text', 'footer_link'];
+        $superAdminOnlyFields = ['app_name', 'support_phone', 'footer_text', 'footer_link', 'login_background_color'];
 
         if ($request->anyFilled($superAdminOnlyFields) && ! $request->user()->isSuperAdmin()) {
             abort(403, 'Super Admin pekee anaweza kubadilisha mipangilio hii.');
@@ -96,6 +98,7 @@ class SettingsController extends Controller
             'support_phone' => $settings->support_phone,
             'footer_text' => $settings->footer_text,
             'footer_link' => $settings->footer_link,
+            'login_background_color' => $settings->login_background_color,
         ]);
     }
 }
