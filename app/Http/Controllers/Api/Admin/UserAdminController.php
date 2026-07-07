@@ -324,8 +324,11 @@ class UserAdminController extends Controller
 
         [$local, $domain] = explode('@', $email, 2);
 
+        // Tumia "." kabla ya namba ya kutofautisha (mfano "dickson.thomas25.2@...")
+        // badala ya kuunganisha moja kwa moja (ambayo ingezalisha "dickson.thomas252@..."
+        // - inayoonekana kama mwaka tofauti kabisa, si kama namba ya kutofautisha).
         for ($i = 2; $i < 100; $i++) {
-            $candidate = "{$local}{$i}@{$domain}";
+            $candidate = "{$local}.{$i}@{$domain}";
             if (! $exists($candidate)) {
                 return $candidate;
             }

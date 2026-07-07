@@ -53,11 +53,29 @@ class BookingController extends Controller
             'semester_id' => ['required', 'exists:semesters,id'],
             'booking_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'end_time' => ['required', 'date_format:H:i'],
             'purpose' => ['required', Rule::in(['study_unit', 'test', 'makeup_class', 'meeting', 'other'])],
             'title' => ['nullable', 'string', 'max:255'],
             'signature' => ['required', 'string'],
         ]);
+
+        // "00:00" kwenye ombi la mtumiaji inamaanisha "hadi usiku wa manane" (mwisho
+        // wa siku). Tunaihifadhi kama "23:59" badala yake kwa sababu comparisons
+        // zote za mgongano (overlapping) kwenye mfumo ni za muda wa siku moja tu
+        // (hazina dhana ya kuvuka siku) - "00:00" ingevunja comparisons hizo.
+        if ($data['end_time'] === '00:00') {
+            $data['end_time'] = '23:59';
+        }
+
+        if ($data['end_time'] <= $data['start_time']) {
+            return response()->json(['message' => 'End time must be after start time.'], 422);
+        }
+
+        if ($data['purpose'] === 'study_unit' && $data['start_time'] < '19:00') {
+            return response()->json([
+                'message' => 'Study Unit bookings are only allowed from 19:00 (7 PM) until midnight.',
+            ], 422);
+        }
 
         $venue = Venue::findOrFail($data['venue_id']);
 

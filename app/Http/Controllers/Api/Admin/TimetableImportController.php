@@ -43,8 +43,14 @@ class TimetableImportController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        $message = "Timetable imevutwa: venues {$result['venues']}, timetable slots mpya {$result['slots_created']}.";
+
+        if (! empty($result['failed'])) {
+            $message .= ' Venues zilizoshindikana: '.implode(', ', $result['failed']).'.';
+        }
+
         return response()->json([
-            'message' => "Timetable imevutwa: venues {$result['venues']}, timetable slots mpya {$result['slots_created']}.",
+            'message' => $message,
             ...$result,
         ]);
     }

@@ -15,10 +15,17 @@ class MzumbeTimetableScraper
      * Vuta venues na ratiba kutoka kwenye URL ya index ya timetable ya Mzumbe
      * (Mimosa scheduling export) na kuziingiza kwenye Semester husika.
      *
-     * @return array{venues: int, slots_created: int}
+     * @return array{venues: int, slots_created: int, failed: array<int, string>}
      */
     public function importFromUrl(string $baseUrl, Semester $semester, string $campus, ?callable $onProgress = null): array
     {
+        // Campus zingine zina venues nyingi zaidi (kila moja inahitaji HTTP fetch
+        // yake), hivyo import inaweza kuchukua muda mrefu kuliko default PHP
+        // execution time limit - ondoa kikomo hicho kwa request hii.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+
         $baseUrl = rtrim($baseUrl, '/').'/';
 
         $indexHtml = $this->fetch($baseUrl.'index.htm') ?? $this->fetch($baseUrl);
@@ -34,11 +41,18 @@ class MzumbeTimetableScraper
         }
 
         $totalSlots = 0;
+        $failed = [];
 
         foreach ($venues as $venueInfo) {
-            $html = $this->fetch($baseUrl.$venueInfo['href']);
+            try {
+                $html = $this->fetch($baseUrl.$venueInfo['href']);
 
-            if ($html) {
+                if (! $html) {
+                    $failed[] = $venueInfo['name'];
+
+                    continue;
+                }
+
                 $venue = Venue::firstOrCreate(
                     ['name' => $venueInfo['name'], 'campus' => $campus],
                     [
@@ -73,6 +87,10 @@ class MzumbeTimetableScraper
                         $totalSlots++;
                     }
                 }
+            } catch (\Throwable) {
+                // Ukurasa wa venue hii una muundo tofauti/umeharibika - ruka na
+                // uendelee na venue nyingine badala ya kusimamisha import nzima.
+                $failed[] = $venueInfo['name'];
             }
 
             if ($onProgress) {
@@ -80,13 +98,13 @@ class MzumbeTimetableScraper
             }
         }
 
-        return ['venues' => count($venues), 'slots_created' => $totalSlots];
+        return ['venues' => count($venues), 'slots_created' => $totalSlots, 'failed' => $failed];
     }
 
     private function fetch(string $url): ?string
     {
         try {
-            $response = Http::withHeaders(['User-Agent' => 'Mozilla/5.0'])->timeout(20)->get($url);
+            $response = Http::withHeaders(['User-Agent' => 'Mozilla/5.0'])->timeout(30)->get($url);
 
             return $response->successful() ? $response->body() : null;
         } catch (\Throwable) {

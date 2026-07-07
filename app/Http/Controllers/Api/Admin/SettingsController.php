@@ -38,14 +38,16 @@ class SettingsController extends Controller
             'logo_url' => $settings->logo_path,
             'app_name' => $settings->app_name,
             'support_phone' => $settings->support_phone,
+            'footer_text' => $settings->footer_text,
+            'footer_link' => $settings->footer_link,
         ]);
     }
 
     /**
      * Admin anabadilisha rangi kuu (default) ya mfumo na/au logo ya App.
      * Logo si ya lazima - Admin anaweza kubadilisha rangi tu bila kugusa logo.
-     * Jina la App na namba ya msaada (support phone) ni Super Admin PEKEE
-     * anayeweza kuvibadilisha.
+     * Jina la App, namba ya msaada (support phone), na maneno/link ya footer ni
+     * Super Admin PEKEE anayeweza kuvibadilisha.
      */
     public function update(Request $request): JsonResponse
     {
@@ -54,10 +56,14 @@ class SettingsController extends Controller
             'logo' => ['nullable', 'image', 'max:2048'],
             'app_name' => ['nullable', 'string', 'max:255'],
             'support_phone' => ['nullable', 'string', 'max:50'],
+            'footer_text' => ['nullable', 'string', 'max:255'],
+            'footer_link' => ['nullable', 'url', 'max:255'],
         ]);
 
-        if (($request->filled('app_name') || $request->filled('support_phone')) && ! $request->user()->isSuperAdmin()) {
-            abort(403, 'Super Admin pekee anaweza kubadilisha Jina la App/Namba ya Msaada.');
+        $superAdminOnlyFields = ['app_name', 'support_phone', 'footer_text', 'footer_link'];
+
+        if ($request->anyFilled($superAdminOnlyFields) && ! $request->user()->isSuperAdmin()) {
+            abort(403, 'Super Admin pekee anaweza kubadilisha mipangilio hii.');
         }
 
         $settings = AppSetting::current();
@@ -72,12 +78,10 @@ class SettingsController extends Controller
             $settings->logo_path = 'data:'.$file->getMimeType().';base64,'.$base64;
         }
 
-        if ($request->filled('app_name')) {
-            $settings->app_name = $data['app_name'];
-        }
-
-        if ($request->filled('support_phone')) {
-            $settings->support_phone = $data['support_phone'];
+        foreach ($superAdminOnlyFields as $field) {
+            if ($request->filled($field)) {
+                $settings->{$field} = $data[$field];
+            }
         }
 
         $settings->save();
@@ -90,6 +94,8 @@ class SettingsController extends Controller
             'logo_url' => $settings->logo_path,
             'app_name' => $settings->app_name,
             'support_phone' => $settings->support_phone,
+            'footer_text' => $settings->footer_text,
+            'footer_link' => $settings->footer_link,
         ]);
     }
 }

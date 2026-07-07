@@ -11,6 +11,8 @@ class AppSetting extends Model
         'logo_path',
         'app_name',
         'support_phone',
+        'footer_text',
+        'footer_link',
     ];
 
     protected $attributes = [
