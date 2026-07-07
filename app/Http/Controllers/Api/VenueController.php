@@ -93,6 +93,13 @@ class VenueController extends Controller
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
         ]);
 
+        if (! Semester::where('id', $data['semester_id'])->where('is_active', true)->exists()) {
+            return response()->json([
+                'message' => 'Semester hii siyo active kwa sasa. Chagua semester iliyo active.',
+                'venues' => [],
+            ], 200);
+        }
+
         $dayOfWeek = Carbon::parse($data['date'])->format('l');
 
         $timetableBusyIds = TimetableSlot::where('semester_id', $data['semester_id'])
@@ -178,12 +185,16 @@ class VenueController extends Controller
 
         $dayOfWeek = Carbon::parse($data['date'])->format('l');
         $campus = $request->user()->campus;
+        $activeSemester = Semester::where('is_active', true)->first();
 
-        $timetable = TimetableSlot::with('venue')
-            ->whereHas('venue', fn ($q) => $q->where('campus', $campus))
-            ->where('day_of_week', $dayOfWeek)
-            ->orderBy('start_time')
-            ->get();
+        $timetable = $activeSemester
+            ? TimetableSlot::with('venue')
+                ->whereHas('venue', fn ($q) => $q->where('campus', $campus))
+                ->where('semester_id', $activeSemester->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->orderBy('start_time')
+                ->get()
+            : collect();
 
         $bookings = Booking::with(['venue', 'user'])
             ->whereHas('venue', fn ($q) => $q->where('campus', $campus))
