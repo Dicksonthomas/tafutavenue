@@ -39,7 +39,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/semesters', [SemesterController::class, 'index']);
     Route::post('/me/color-preference', [AuthController::class, 'updateColorPreference']);
-    Route::get('/logs', [ActivityLogController::class, 'index']);
     Route::get('/timetable/by-lecturer', [TimetableSlotController::class, 'byLecturer']);
 
     Route::get('/venues', [VenueController::class, 'index']);
@@ -92,5 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admins', [AdminUserController::class, 'store']);
         Route::put('/admins/{admin}', [AdminUserController::class, 'update']);
         Route::delete('/admins/{admin}', [AdminUserController::class, 'destroy']);
+
+        Route::get('/logs', [ActivityLogController::class, 'index']);
     });
 });

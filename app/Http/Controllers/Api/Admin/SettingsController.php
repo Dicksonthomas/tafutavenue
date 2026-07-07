@@ -41,6 +41,7 @@ class SettingsController extends Controller
             'footer_text' => $settings->footer_text,
             'footer_link' => $settings->footer_link,
             'login_background_color' => $settings->login_background_color,
+            'study_unit_hours' => $settings->study_unit_hours,
         ]);
     }
 
@@ -52,6 +53,8 @@ class SettingsController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
+        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
         $data = $request->validate([
             'primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'logo' => ['nullable', 'image', 'max:2048'],
@@ -60,7 +63,20 @@ class SettingsController extends Controller
             'footer_text' => ['nullable', 'string', 'max:255'],
             'footer_link' => ['nullable', 'url', 'max:255'],
             'login_background_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'study_unit_hours' => ['nullable', 'array'],
+            'study_unit_hours.*' => ['array'],
+            'study_unit_hours.*.start' => ['required_with:study_unit_hours', 'date_format:H:i'],
+            'study_unit_hours.*.end' => ['required_with:study_unit_hours', 'date_format:H:i'],
         ]);
+
+        if ($request->has('study_unit_hours')) {
+            $invalidDay = collect(array_keys($request->input('study_unit_hours', [])))
+                ->first(fn ($day) => ! in_array($day, $days, true));
+
+            if ($invalidDay) {
+                abort(422, "Siku isiyotambulika: {$invalidDay}.");
+            }
+        }
 
         $superAdminOnlyFields = ['app_name', 'support_phone', 'footer_text', 'footer_link', 'login_background_color'];
 
@@ -86,6 +102,10 @@ class SettingsController extends Controller
             }
         }
 
+        if ($request->has('study_unit_hours')) {
+            $settings->study_unit_hours = $data['study_unit_hours'];
+        }
+
         $settings->save();
 
         ActivityLog::record($request->user()->id, 'settings_updated', "{$request->user()->name} updated the system settings.");
@@ -99,6 +119,7 @@ class SettingsController extends Controller
             'footer_text' => $settings->footer_text,
             'footer_link' => $settings->footer_link,
             'login_background_color' => $settings->login_background_color,
+            'study_unit_hours' => $settings->study_unit_hours,
         ]);
     }
 }

@@ -14,11 +14,19 @@ class AppSetting extends Model
         'footer_text',
         'footer_link',
         'login_background_color',
+        'study_unit_hours',
     ];
 
     protected $attributes = [
         'primary_color' => '#3db166',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'study_unit_hours' => 'array',
+        ];
+    }
 
     public static function current(): self
     {

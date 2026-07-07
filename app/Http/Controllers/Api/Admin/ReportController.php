@@ -64,12 +64,17 @@ class ReportController extends Controller
 
         $crQuery = User::where('role', 'cr');
 
+        $venuesByCampus = Venue::select('campus', DB::raw('count(*) as total'))
+            ->groupBy('campus')
+            ->pluck('total', 'campus');
+
         return response()->json([
             'total_bookings' => (clone $query)->count(),
             'by_status' => $byStatus,
             'by_purpose' => $byPurpose,
             'most_booked_venues' => $mostBookedVenues,
             'total_venues' => Venue::count(),
+            'venues_by_campus' => $venuesByCampus,
             'total_crs' => (clone $crQuery)->count(),
             'male_crs' => (clone $crQuery)->where('sex', 'male')->count(),
             'female_crs' => (clone $crQuery)->where('sex', 'female')->count(),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\BookingConfirmedMail;
 use App\Models\ActivityLog;
+use App\Models\AppSetting;
 use App\Models\Booking;
 use App\Models\TimetableSlot;
 use App\Models\Venue;
@@ -59,6 +60,8 @@ class BookingController extends Controller
             'signature' => ['required', 'string'],
         ]);
 
+        $dayOfWeek = Carbon::parse($data['booking_date'])->format('l');
+
         // "00:00" kwenye ombi la mtumiaji inamaanisha "hadi usiku wa manane" (mwisho
         // wa siku). Tunaihifadhi kama "23:59" badala yake kwa sababu comparisons
         // zote za mgongano (overlapping) kwenye mfumo ni za muda wa siku moja tu
@@ -71,10 +74,19 @@ class BookingController extends Controller
             return response()->json(['message' => 'End time must be after start time.'], 422);
         }
 
-        if ($data['purpose'] === 'study_unit' && $data['start_time'] < '19:00') {
-            return response()->json([
-                'message' => 'Study Unit bookings are only allowed from 19:00 (7 PM) until midnight.',
-            ], 422);
+        if ($data['purpose'] === 'study_unit') {
+            $configuredHours = AppSetting::current()->study_unit_hours[$dayOfWeek] ?? null;
+            $windowStart = $configuredHours['start'] ?? '19:00';
+            $windowEndRaw = $configuredHours['end'] ?? '00:00';
+            $windowEnd = $windowEndRaw === '00:00' ? '23:59' : $windowEndRaw;
+
+            if ($data['start_time'] < $windowStart || $data['start_time'] > $windowEnd) {
+                $windowEndLabel = $windowEndRaw === '00:00' ? 'midnight' : $windowEndRaw;
+
+                return response()->json([
+                    'message' => "Study Unit bookings on {$dayOfWeek} are only allowed from {$windowStart} until {$windowEndLabel}.",
+                ], 422);
+            }
         }
 
         $venue = Venue::findOrFail($data['venue_id']);
@@ -96,8 +108,6 @@ class BookingController extends Controller
                 'message' => "Venue {$venue->name} ina masharti maalum (campus/level/department) ambayo huna ruhusa nayo.",
             ], 403);
         }
-
-        $dayOfWeek = Carbon::parse($data['booking_date'])->format('l');
 
         $clashesWithTimetable = TimetableSlot::overlapping(
             $data['venue_id'],

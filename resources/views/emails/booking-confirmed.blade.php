@@ -10,7 +10,7 @@
         </div>
         <div style="padding:24px;color:#1e293b;">
             <p>Habari {{ $booking->user->name }},</p>
-            <p>Ombi lako la kubook venue limetumwa kwa mafanikio na linasubiri idhini ya Admin. Taarifa za booking:</p>
+            <p>Booking yako imethibitishwa moja kwa moja (auto-approved) - venue tayari ni yako kwa muda ulioomba. Taarifa za booking:</p>
 
             <table style="width:100%;border-collapse:collapse;margin:16px 0;">
                 <tr>
@@ -31,12 +31,12 @@
                 </tr>
                 <tr>
                     <td style="padding:8px 0;color:#64748b;font-size:13px;">Status</td>
-                    <td style="padding:8px 0;font-weight:bold;">Inasubiri Idhini (Pending)</td>
+                    <td style="padding:8px 0;font-weight:bold;color:#16a34a;">Imeidhinishwa (Approved)</td>
                 </tr>
             </table>
 
             <p style="font-size:13px;color:#64748b;">
-                Utapata email nyingine mara Admin atakapoidhinisha au kukataa ombi hili.
+                Hakikisha unafika kwa muda uliobook. Ukihitaji kufuta booking hii, fanya hivyo kwenye "My Bookings" kwenye mfumo.
             </p>
         </div>
     </div>
