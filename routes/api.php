@@ -67,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/venues/{venue}', [VenueAdminController::class, 'destroy']);
         Route::post('/venues/import-timetable', [VenueAdminController::class, 'importTimetable']);
         Route::get('/venues/timetable-status', [VenueAdminController::class, 'timetableStatus']);
+        Route::delete('/venues/timetable', [VenueAdminController::class, 'clearTimetable']);
 
         Route::post('/timetable/import-from-link', [TimetableImportController::class, 'importFromLink']);
 

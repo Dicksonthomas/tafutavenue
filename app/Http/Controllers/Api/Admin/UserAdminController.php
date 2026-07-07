@@ -58,8 +58,8 @@ class UserAdminController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'reg_no' => ['nullable', 'string', 'max:50', 'unique:users,reg_no'],
-            'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email'],
+            'reg_no' => ['nullable', 'string', 'max:50', Rule::unique('users', 'reg_no')->whereNull('deleted_at')],
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone' => ['required', 'string', 'max:20'],
             'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'sex' => ['required', Rule::in(['male', 'female'])],
@@ -300,6 +300,11 @@ class UserAdminController extends Controller
             'preferred_color' => null,
             'is_active' => false,
         ]);
+
+        // Soft delete (deleted_at) - CR haonekani tena kwenye orodha ya /admin/users,
+        // lakini rekodi yake inabaki DB (bookings/logs zake bado zinapatikana kwa
+        // historia, kupitia withTrashed() kwenye relations husika).
+        $user->delete();
 
         ActivityLog::record(
             $request->user()->id,

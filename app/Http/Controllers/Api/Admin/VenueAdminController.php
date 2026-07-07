@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Booking;
 use App\Models\TimetableSlot;
 use App\Models\Venue;
 use Illuminate\Http\JsonResponse;
@@ -112,6 +113,58 @@ class VenueAdminController extends Controller
             ->count();
 
         return response()->json(['existing_slots' => $count]);
+    }
+
+    /**
+     * Futa kabisa ratiba (timetable slots) ya campus+semester husika, kupitia
+     * yote iliyoingizwa kwa link au CSV - kwa ajili ya kusafisha data mbovu
+     * kabla ya kuingiza upya. Venues zilizoundwa na import (source=timetable_import)
+     * pia zinafutwa, ISIPOKUWA zile zenye bookings za CR (hizo zinabaki ili
+     * historia ya bookings isivunjike).
+     */
+    public function clearTimetable(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'semester_id' => ['required', 'exists:semesters,id'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+        ]);
+
+        $slotsDeleted = TimetableSlot::where('semester_id', $data['semester_id'])
+            ->whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
+            ->delete();
+
+        $venueIdsWithBookings = Booking::whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
+            ->pluck('venue_id')
+            ->unique();
+
+        $venuesDeleted = Venue::where('campus', $data['campus'])
+            ->where('source', 'timetable_import')
+            ->whereNotIn('id', $venueIdsWithBookings)
+            ->delete();
+
+        $venuesKept = Venue::where('campus', $data['campus'])
+            ->where('source', 'timetable_import')
+            ->whereIn('id', $venueIdsWithBookings)
+            ->count();
+
+        $message = "Timetable data imefutwa: schedule entries {$slotsDeleted}, venues {$venuesDeleted}.";
+
+        if ($venuesKept > 0) {
+            $message .= " Venues {$venuesKept} zimebaki kwa sababu zina bookings za CR.";
+        }
+
+        ActivityLog::record(
+            $request->user()->id,
+            'timetable_cleared',
+            "{$request->user()->name} cleared timetable data for {$data['campus']}: {$slotsDeleted} slots, {$venuesDeleted} venues removed."
+        );
+
+        return response()->json([
+            'message' => $message,
+            'slots_deleted' => $slotsDeleted,
+            'venues_deleted' => $venuesDeleted,
+            'venues_kept' => $venuesKept,
+        ]);
     }
 
     /**

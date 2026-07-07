@@ -31,7 +31,7 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'reg_no' => ['required', 'string', 'max:50', 'unique:users,reg_no'],
+            'reg_no' => ['required', 'string', 'max:50', Rule::unique('users', 'reg_no')->whereNull('deleted_at')],
             'phone' => ['required', 'string', 'max:20'],
             'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'sex' => ['required', Rule::in(['male', 'female'])],

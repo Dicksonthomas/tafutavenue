@@ -40,7 +40,7 @@ class Booking extends Model
     /** @return BelongsTo<User, Booking> */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     /** @return BelongsTo<Venue, Booking> */
@@ -58,7 +58,7 @@ class Booking extends Model
     /** @return BelongsTo<User, Booking> */
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by')->withTrashed();
     }
 
     /**
