@@ -116,10 +116,14 @@ class BookingController extends Controller
             return response()->json(['message' => $conflictMessage], 409);
         }
 
+        // Hakuna mgongano wowote uliopatikana (tayari umekaguliwa hapo juu dhidi ya
+        // timetable na bookings nyingine), kwa hiyo booking inaidhinishwa (approved)
+        // moja kwa moja bila kusubiri Admin - mfumo wenyewe ndio umeshathibitisha.
         $booking = Booking::create([
             ...$data,
             'user_id' => $request->user()->id,
-            'status' => 'pending',
+            'status' => 'approved',
+            'approved_at' => now(),
             'signed_at' => now(),
         ]);
 
@@ -129,7 +133,7 @@ class BookingController extends Controller
             $request->user()->id,
             'booking_created',
             "{$booking->user->name} ame-book {$booking->venue->name} tarehe ".Carbon::parse($booking->booking_date)->format('d/m/Y')
-                ." kuanzia {$booking->start_time} hadi {$booking->end_time}.",
+                ." kuanzia {$booking->start_time} hadi {$booking->end_time} (auto-approved).",
             $booking->id
         );
 

@@ -12,13 +12,16 @@ class BookingAdminController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $perPageInput = $request->input('per_page', 30);
+        $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
+
         $bookings = Booking::with(['user', 'venue', 'semester'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
             ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))
             ->orderByDesc('booking_date')
             ->orderByDesc('start_time')
-            ->paginate(30);
+            ->paginate($perPage);
 
         return response()->json($bookings);
     }

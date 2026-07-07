@@ -26,6 +26,9 @@ class UserAdminController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $perPageInput = $request->input('per_page', 20);
+        $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
+
         $users = User::query()
             ->where('role', 'cr')
             ->when($request->filled('q'), function ($query) use ($request) {
@@ -38,7 +41,7 @@ class UserAdminController extends Controller
                 });
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json($users);
     }

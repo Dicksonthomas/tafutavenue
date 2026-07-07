@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
 use App\Http\Controllers\Api\Admin\ReportController;
 use App\Http\Controllers\Api\Admin\SettingsController;
@@ -84,5 +85,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/import', [UserAdminController::class, 'importCsv']);
 
         Route::post('/settings', [SettingsController::class, 'update']);
+
+        Route::get('/admins', [AdminUserController::class, 'index']);
+        Route::post('/admins', [AdminUserController::class, 'store']);
+        Route::delete('/admins/{admin}', [AdminUserController::class, 'destroy']);
     });
 });
