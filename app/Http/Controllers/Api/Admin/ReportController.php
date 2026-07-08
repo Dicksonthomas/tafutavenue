@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -119,17 +120,31 @@ class ReportController extends Controller
      * Pakua ripoti ya bookings zote (PDF), ikichujwa na status/date/venue kama
      * inavyofanya BookingAdminController::index.
      */
-    public function exportBookingsPdf(Request $request): Response
+    public function exportBookingsPdf(Request $request): Response|JsonResponse
     {
-        $bookings = $this->filteredBookingsQuery($request)->get();
+        // Kuzalisha PDF ya jedwali kubwa kunaweza kutumia muda/memory zaidi ya
+        // default za baadhi ya hosting (mfano Railway) - ongeza kikomo kwa
+        // request hii pekee ili isikatike katikati.
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(60);
 
-        $pdf = Pdf::loadView('reports.bookings-pdf', [
-            'bookings' => $bookings,
-            'status' => $request->string('status')->toString(),
-            'generatedAt' => now(),
-        ])->setPaper('a4', 'landscape');
+        try {
+            $bookings = $this->filteredBookingsQuery($request)->get();
 
-        return $pdf->download('bookings_report.pdf');
+            $pdf = Pdf::loadView('reports.bookings-pdf', [
+                'bookings' => $bookings,
+                'status' => $request->string('status')->toString(),
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download('bookings_report.pdf');
+        } catch (\Throwable $e) {
+            Log::error('PDF export ya bookings imeshindikana: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'message' => 'Imeshindikana kutengeneza PDF. Jaribu tena au wasiliana na msimamizi wa mfumo.',
+            ], 500);
+        }
     }
 
     /**
