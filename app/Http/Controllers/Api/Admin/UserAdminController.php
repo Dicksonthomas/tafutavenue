@@ -154,7 +154,9 @@ class UserAdminController extends Controller
             'role' => 'cr',
         ]);
 
-        Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+        dispatch(function () use ($user, $plainPassword) {
+            Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+        })->afterResponse();
 
         ActivityLog::record($request->user()->id, 'cr_created', "{$request->user()->name} registered a new CR: {$user->name}.");
 
@@ -244,7 +246,9 @@ class UserAdminController extends Controller
                 'role' => 'cr',
             ]);
 
-            Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+            dispatch(function () use ($user, $plainPassword) {
+                Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+            })->afterResponse();
 
             $created[] = [
                 'name' => $user->name,
@@ -325,7 +329,9 @@ class UserAdminController extends Controller
 
         if ($emailChanged || $newPassword) {
             $passwordForEmail = $newPassword ?? '(unchanged - keep using your existing password)';
-            Mail::to($user->email)->send(new CrCredentialsMail($user, $passwordForEmail));
+            dispatch(function () use ($user, $passwordForEmail) {
+                Mail::to($user->email)->send(new CrCredentialsMail($user, $passwordForEmail));
+            })->afterResponse();
         }
 
         ActivityLog::record($request->user()->id, 'cr_updated', "{$request->user()->name} updated CR {$user->name}'s details.");
