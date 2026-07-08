@@ -72,6 +72,11 @@ class ReportController extends Controller
             ->groupBy('campus')
             ->pluck('total', 'campus');
 
+        $crsByCampus = (clone $crQuery)
+            ->select('campus', DB::raw('count(*) as total'))
+            ->groupBy('campus')
+            ->pluck('total', 'campus');
+
         return response()->json([
             'total_bookings' => (clone $query)->count(),
             'by_status' => $byStatus,
@@ -80,6 +85,7 @@ class ReportController extends Controller
             'total_venues' => Venue::count(),
             'venues_by_campus' => $venuesByCampus,
             'total_crs' => (clone $crQuery)->count(),
+            'crs_by_campus' => $crsByCampus,
             'male_crs' => (clone $crQuery)->where('sex', 'male')->count(),
             'female_crs' => (clone $crQuery)->where('sex', 'female')->count(),
         ]);
