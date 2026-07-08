@@ -18,7 +18,7 @@ class AppSetting extends Model
     ];
 
     protected $attributes = [
-        'primary_color' => '#f05a28',
+        'primary_color' => '#da4e1f',
     ];
 
     protected function casts(): array
