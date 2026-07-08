@@ -77,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/bookings', [BookingAdminController::class, 'index']);
         Route::post('/bookings/{booking}/approve', [BookingAdminController::class, 'approve']);
         Route::post('/bookings/{booking}/reject', [BookingAdminController::class, 'reject']);
+        Route::delete('/bookings/{booking}', [BookingAdminController::class, 'destroy']);
+        Route::delete('/bookings', [BookingAdminController::class, 'destroyAll']);
 
         Route::get('/reports/summary', [ReportController::class, 'summary']);
         Route::get('/reports/venues/{venue}', [ReportController::class, 'venueUsage']);

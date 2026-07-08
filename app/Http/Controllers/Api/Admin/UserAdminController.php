@@ -40,6 +40,13 @@ class UserAdminController extends Controller
                         ->orWhere('program', 'like', "%{$q}%");
                 });
             })
+            ->when($request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
+            ->when($request->filled('faculty'), fn ($query) => $query->where('faculty', $request->string('faculty')))
+            ->when($request->filled('department'), fn ($query) => $query->where('department', $request->string('department')))
+            ->when($request->filled('program'), fn ($query) => $query->where('program', $request->string('program')))
+            ->when($request->filled('level'), fn ($query) => $query->where('level', $request->string('level')))
+            ->when($request->filled('year_of_study'), fn ($query) => $query->where('year_of_study', $request->integer('year_of_study')))
+            ->when($request->filled('sex'), fn ($query) => $query->where('sex', $request->string('sex')))
             ->orderBy('name')
             ->paginate($perPage);
 

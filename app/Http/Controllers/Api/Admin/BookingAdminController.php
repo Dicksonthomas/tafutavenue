@@ -70,4 +70,55 @@ class BookingAdminController extends Controller
 
         return response()->json($booking);
     }
+
+    /**
+     * Futa kabisa rekodi ya booking MOJA - inaruhusiwa kwa status yoyote
+     * (pending/approved/rejected/cancelled), tofauti na cancel() ya CR ambayo
+     * ni "soft" (inabadilisha status tu, siyo kufuta).
+     */
+    public function destroy(Request $request, Booking $booking): JsonResponse
+    {
+        $venueName = $booking->venue?->name ?? "Venue #{$booking->venue_id}";
+        $userName = $booking->user?->name ?? "User #{$booking->user_id}";
+        $status = $booking->status;
+
+        $booking->delete();
+
+        ActivityLog::record(
+            $request->user()->id,
+            'booking_deleted',
+            "{$request->user()->name} permanently deleted a {$status} booking of {$venueName} by {$userName}."
+        );
+
+        return response()->json(['message' => 'Booking imefutwa.']);
+    }
+
+    /**
+     * Futa rekodi ZOTE za bookings zinazolingana na filters za sasa
+     * (status/date/venue), kama inavyofanya index().
+     */
+    public function destroyAll(Request $request): JsonResponse
+    {
+        $bookings = Booking::with(['user', 'venue'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
+            ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))
+            ->get();
+
+        $count = $bookings->count();
+
+        foreach ($bookings as $booking) {
+            $booking->delete();
+        }
+
+        $scope = $request->filled('status') ? "with status \"{$request->string('status')}\"" : 'of all statuses';
+
+        ActivityLog::record(
+            $request->user()->id,
+            'booking_deleted',
+            "{$request->user()->name} permanently deleted {$count} booking(s) {$scope}."
+        );
+
+        return response()->json(['message' => "Bookings {$count} zimefutwa.", 'deleted' => $count]);
+    }
 }
