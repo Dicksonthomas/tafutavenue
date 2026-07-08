@@ -25,6 +25,7 @@
         <p>
             Generated {{ $generatedAt->format('d/m/Y H:i') }}
             @if($status) &middot; Status: {{ ucfirst($status) }} @endif
+            @if($date) &middot; Date: {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }} @endif
             &middot; Total: {{ $bookings->count() }}
         </p>
     </div>

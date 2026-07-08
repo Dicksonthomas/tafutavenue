@@ -152,6 +152,7 @@ class ReportController extends Controller
             $pdf = Pdf::loadView('reports.bookings-pdf', [
                 'bookings' => $bookings,
                 'status' => $request->string('status')->toString(),
+                'date' => $request->string('date')->toString(),
                 'generatedAt' => now(),
             ])->setPaper('a4', 'landscape');
 
