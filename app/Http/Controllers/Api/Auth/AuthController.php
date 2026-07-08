@@ -58,7 +58,7 @@ class AuthController extends Controller
             'role' => 'cr',
         ]);
 
-        Mail::to($user->email)->queue(new CrCredentialsMail($user, $plainPassword));
+        Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
 
         $token = $user->createToken('mobile-app')->plainTextToken;
 
