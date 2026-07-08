@@ -14,15 +14,22 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
+    /**
+     * A CR gets up to this many bookings auto-approved per calendar day;
+     * beyond that they must give a reason and a campus Admin reviews it.
+     */
+    private const DAILY_AUTO_APPROVE_LIMIT = 2;
+
     /**
      * Bookings belonging to the logged-in CR.
      */
     public function index(Request $request): JsonResponse
     {
-        $bookings = Booking::with(['venue', 'semester'])
+        $bookings = Booking::with(['venue', 'semester', 'approver'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('booking_date')
             ->orderByDesc('start_time')
@@ -59,6 +66,7 @@ class BookingController extends Controller
             'purpose' => ['required', Rule::in(['study_unit', 'test', 'makeup_class', 'meeting', 'other'])],
             'title' => ['nullable', 'string', 'max:255'],
             'signature' => ['required', 'string'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $dayOfWeek = Carbon::parse($data['booking_date'])->format('l');
@@ -145,28 +153,58 @@ class BookingController extends Controller
             return response()->json(['message' => $conflictMessage], 409);
         }
 
+        // A CR can have up to DAILY_AUTO_APPROVE_LIMIT bookings auto-approved
+        // per calendar day; beyond that they must explain why, and the
+        // booking goes to their campus Admin for manual review instead of
+        // being auto-approved (same pending/approve flow as any other
+        // booking an Admin reviews).
+        $bookingsTodayCount = Booking::where('user_id', $request->user()->id)
+            ->whereDate('booking_date', $data['booking_date'])
+            ->whereIn('status', ['pending', 'approved'])
+            ->count();
+
+        $exceedsDailyLimit = $bookingsTodayCount >= self::DAILY_AUTO_APPROVE_LIMIT;
+
+        if ($exceedsDailyLimit && empty($data['reason'])) {
+            throw ValidationException::withMessages([
+                'reason' => 'You have already booked '.self::DAILY_AUTO_APPROVE_LIMIT
+                    .' venue(s) today. Please explain why you need another one, so your campus Admin can review it.',
+            ]);
+        }
+
         // No conflict was found (already checked above against the timetable
-        // and other bookings), so the booking is approved immediately without
-        // waiting for an Admin - the system itself has already verified it.
+        // and other bookings), so - unless the daily limit above was exceeded
+        // - the booking is approved immediately without waiting for an
+        // Admin, since the system itself has already verified it.
         $booking = Booking::create([
             ...$data,
             'user_id' => $request->user()->id,
-            'status' => 'approved',
-            'approved_at' => now(),
-            'signed_at' => now(),
+            'status' => $exceedsDailyLimit ? 'pending' : 'approved',
+            ...($exceedsDailyLimit ? [] : ['approved_at' => now(), 'signed_at' => now()]),
         ]);
 
         $booking->load(['venue', 'user']);
 
-        ActivityLog::record(
-            $request->user()->id,
-            'booking_created',
-            "{$booking->user->name} booked {$booking->venue->name} on ".Carbon::parse($booking->booking_date)->format('d/m/Y')
-                ." from {$booking->start_time} to {$booking->end_time} (auto-approved).",
-            $booking->id
-        );
+        if ($exceedsDailyLimit) {
+            ActivityLog::record(
+                $request->user()->id,
+                'booking_pending_review',
+                "{$booking->user->name} requested an extra booking of {$booking->venue->name} on "
+                    .Carbon::parse($booking->booking_date)->format('d/m/Y')
+                    ." beyond the daily limit, pending Admin review. Reason: {$data['reason']}",
+                $booking->id
+            );
+        } else {
+            ActivityLog::record(
+                $request->user()->id,
+                'booking_created',
+                "{$booking->user->name} booked {$booking->venue->name} on ".Carbon::parse($booking->booking_date)->format('d/m/Y')
+                    ." from {$booking->start_time} to {$booking->end_time} (auto-approved).",
+                $booking->id
+            );
 
-        Mail::to($booking->user->email)->queue(new BookingConfirmedMail($booking));
+            Mail::to($booking->user->email)->queue(new BookingConfirmedMail($booking));
+        }
 
         return response()->json($booking, 201);
     }

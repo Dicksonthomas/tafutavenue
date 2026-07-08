@@ -26,7 +26,7 @@ class BookingAdminController extends Controller
         $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
         $campusScope = $request->user()->campusScope();
 
-        $bookings = Booking::with(['user', 'venue', 'semester'])
+        $bookings = Booking::with(['user', 'venue', 'semester', 'approver'])
             ->when($campusScope, fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $campusScope)))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))

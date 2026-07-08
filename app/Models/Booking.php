@@ -20,6 +20,7 @@ class Booking extends Model
         'end_time',
         'purpose',
         'title',
+        'reason',
         'status',
         'signature',
         'signed_at',
