@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
 use App\Http\Controllers\Api\Admin\ReportController;
 use App\Http\Controllers\Api\Admin\SettingsController;
+use App\Http\Controllers\Api\Admin\SystemController;
 use App\Http\Controllers\Api\Admin\TimetableImportController;
 use App\Http\Controllers\Api\Admin\UserAdminController;
 use App\Http\Controllers\Api\Admin\VenueAdminController;
@@ -94,6 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/export-pdf', [UserAdminController::class, 'exportPdf']);
 
         Route::post('/settings', [SettingsController::class, 'update']);
+        Route::post('/system/migrate', [SystemController::class, 'migrate']);
 
         Route::get('/admins', [AdminUserController::class, 'index']);
         Route::post('/admins', [AdminUserController::class, 'store']);
