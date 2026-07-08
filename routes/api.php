@@ -91,6 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/users/{user}', [UserAdminController::class, 'destroy']);
         Route::get('/users/import-template', [UserAdminController::class, 'downloadTemplate']);
         Route::post('/users/import', [UserAdminController::class, 'importCsv']);
+        Route::get('/users/export-pdf', [UserAdminController::class, 'exportPdf']);
 
         Route::post('/settings', [SettingsController::class, 'update']);
 

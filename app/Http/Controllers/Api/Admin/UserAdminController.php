@@ -7,9 +7,13 @@ use App\Mail\CrCredentialsMail;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\CrEmailGenerator;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -22,14 +26,12 @@ class UserAdminController extends Controller
     private const VALID_LEVELS = ['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'];
 
     /**
-     * Orodha ya CR wote (kwa ajili ya Admin kuona/kutafuta).
+     * Query ya CR iliyochujwa (q/campus/faculty/department/program/level/
+     * year_of_study/sex), inatumika na index() na exportPdf().
      */
-    public function index(Request $request): JsonResponse
+    private function filteredUsersQuery(Request $request): Builder
     {
-        $perPageInput = $request->input('per_page', 20);
-        $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
-
-        $users = User::query()
+        return User::query()
             ->where('role', 'cr')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $q = $request->string('q');
@@ -47,10 +49,48 @@ class UserAdminController extends Controller
             ->when($request->filled('level'), fn ($query) => $query->where('level', $request->string('level')))
             ->when($request->filled('year_of_study'), fn ($query) => $query->where('year_of_study', $request->integer('year_of_study')))
             ->when($request->filled('sex'), fn ($query) => $query->where('sex', $request->string('sex')))
-            ->orderBy('name')
-            ->paginate($perPage);
+            ->orderBy('name');
+    }
+
+    /**
+     * Orodha ya CR wote (kwa ajili ya Admin kuona/kutafuta).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $perPageInput = $request->input('per_page', 20);
+        $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
+
+        $users = $this->filteredUsersQuery($request)->paginate($perPage);
 
         return response()->json($users);
+    }
+
+    /**
+     * Pakua orodha ya CR (PDF) iliyochujwa kama index(), ikiwa na CR wote
+     * wanaolingana (siyo tu ukurasa mmoja) - kwa ajili ya kuprint.
+     */
+    public function exportPdf(Request $request): Response|JsonResponse
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(60);
+
+        try {
+            $users = $this->filteredUsersQuery($request)->get();
+
+            $pdf = Pdf::loadView('reports.students-pdf', [
+                'users' => $users,
+                'filters' => $request->only(['campus', 'faculty', 'department', 'program', 'level', 'year_of_study', 'sex', 'q']),
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download('cr_list.pdf');
+        } catch (\Throwable $e) {
+            Log::error('PDF export ya CR list imeshindikana: '.$e->getMessage(), ['exception' => $e]);
+
+            return response()->json([
+                'message' => 'Imeshindikana kutengeneza PDF. Jaribu tena au wasiliana na msimamizi wa mfumo.',
+            ], 500);
+        }
     }
 
     /**
