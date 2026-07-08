@@ -98,5 +98,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/admins/{admin}', [AdminUserController::class, 'destroy']);
 
         Route::get('/logs', [ActivityLogController::class, 'index']);
+        Route::get('/logs/actions', [ActivityLogController::class, 'actions']);
+        Route::delete('/logs/{log}', [ActivityLogController::class, 'destroy']);
+        Route::delete('/logs', [ActivityLogController::class, 'destroyAll']);
     });
 });

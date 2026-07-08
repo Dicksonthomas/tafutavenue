@@ -133,24 +133,32 @@ class VenueAdminController extends Controller
             ->whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
             ->delete();
 
-        $venueIdsWithBookings = Booking::whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
+        // Venue moja inaweza kuwa na timetable_slots za semester NYINGINE
+        // (zisizohusika na kufuta huku) au bookings za CR - hizo ndizo pekee
+        // zinazoifanya isiwe salama kuifuta. Bila ukaguzi huu, venue ambayo
+        // bado inatumika kwenye semester nyingine ingefutwa kimakosa.
+        $candidateVenueIds = Venue::where('campus', $data['campus'])
+            ->where('source', 'timetable_import')
+            ->pluck('id');
+
+        $venueIdsStillInUse = TimetableSlot::whereIn('venue_id', $candidateVenueIds)
             ->pluck('venue_id')
+            ->unique()
+            ->merge(
+                Booking::whereIn('venue_id', $candidateVenueIds)->pluck('venue_id')->unique()
+            )
             ->unique();
 
-        $venuesDeleted = Venue::where('campus', $data['campus'])
-            ->where('source', 'timetable_import')
-            ->whereNotIn('id', $venueIdsWithBookings)
+        $venuesDeleted = Venue::whereIn('id', $candidateVenueIds)
+            ->whereNotIn('id', $venueIdsStillInUse)
             ->delete();
 
-        $venuesKept = Venue::where('campus', $data['campus'])
-            ->where('source', 'timetable_import')
-            ->whereIn('id', $venueIdsWithBookings)
-            ->count();
+        $venuesKept = $candidateVenueIds->count() - $venuesDeleted;
 
         $message = "Timetable data imefutwa: schedule entries {$slotsDeleted}, venues {$venuesDeleted}.";
 
         if ($venuesKept > 0) {
-            $message .= " Venues {$venuesKept} zimebaki kwa sababu zina bookings za CR.";
+            $message .= " Venues {$venuesKept} zimebaki kwa sababu bado zina ratiba kwenye semester nyingine au zina bookings za CR.";
         }
 
         ActivityLog::record(
