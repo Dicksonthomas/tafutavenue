@@ -20,13 +20,13 @@ use InvalidArgumentException;
 class AuthController extends Controller
 {
     /**
-     * Usajili wa CR (Class Representative). Akaunti za Admin haziundwi hapa
-     * kwa sababu za usalama - zinaundwa na Admin mwenyewe au seeder.
+     * CR (Class Representative) registration. Admin accounts are not created
+     * here for security reasons - they are created by an Admin or a seeder.
      *
-     * Email ya CR haiandikwi na yeye - inatengenezwa kiotomatiki kutoka
-     * Fullname + Reg No (mfano: "Dickson Musa Thomas" + "14322055/T.25"
-     * -> dickson.thomas25@mustudent.ac.tz). Password nayo hutengenezwa
-     * kiotomatiki na kutumwa kwenye email hiyo - haionekani kwenye response.
+     * The CR's email is not chosen by them - it is generated automatically
+     * from Fullname + Reg No (e.g. "Dickson Musa Thomas" + "14322055/T.25"
+     * -> dickson.thomas25@mustudent.ac.tz). The password is also generated
+     * automatically and sent to that email - it never appears in the response.
      */
     public function register(Request $request): JsonResponse
     {
@@ -65,13 +65,13 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $token,
-            'message' => "Akaunti imetengenezwa. Password imetumwa kwenye email: {$user->email}",
+            'message' => "Account created. Password has been sent to email: {$user->email}",
         ], 201);
     }
 
     /**
-     * Kama email iliyotengenezwa tayari ipo (mfano majina yanayofanana), ongeza
-     * namba mwishoni mwa local-part mpaka ipatikane email isiyotumika.
+     * If the generated email already exists (e.g. similar names), append a
+     * number to the end of the local-part until an unused email is found.
      */
     private function resolveUniqueEmail(string $email): string
     {
@@ -88,7 +88,7 @@ class AuthController extends Controller
             }
         }
 
-        throw ValidationException::withMessages(['reg_no' => 'Imeshindikana kutengeneza email ya kipekee. Wasiliana na Admin.']);
+        throw ValidationException::withMessages(['reg_no' => 'Failed to generate a unique email. Contact the Admin.']);
     }
 
     public function login(Request $request): JsonResponse
@@ -119,7 +119,7 @@ class AuthController extends Controller
             ActivityLog::record($user->id, 'login_blocked', "{$user->name} tried to log in but their account is suspended.");
 
             return response()->json([
-                'message' => 'Akaunti yako imesimamishwa. Wasiliana na Admin.',
+                'message' => 'Your account has been suspended. Contact the Admin.',
             ], 403);
         }
 
@@ -137,7 +137,7 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Umetoka kwa mafanikio.']);
+        return response()->json(['message' => 'Logged out successfully.']);
     }
 
     public function me(Request $request): JsonResponse
@@ -156,19 +156,19 @@ class AuthController extends Controller
 
         if (! Hash::check($data['current_password'], $user->password)) {
             return response()->json([
-                'message' => 'Password ya sasa si sahihi.',
+                'message' => 'Current password is incorrect.',
             ], 422);
         }
 
         $user->update(['password' => Hash::make($data['new_password'])]);
 
-        return response()->json(['message' => 'Password imebadilishwa kwa mafanikio.']);
+        return response()->json(['message' => 'Password changed successfully.']);
     }
 
     /**
-     * Kila mtumiaji (CR au Admin) anaweza kuweka rangi yake binafsi
-     * (inayozidi rangi ya default ya mfumo, lakini kwa akaunti yake tu).
-     * 'color' = null inarudisha kwenye default ya mfumo.
+     * Any user (CR or Admin) can set their own personal color preference
+     * (overriding the system default color, but only for their own account).
+     * 'color' = null resets it back to the system default.
      */
     public function updateColorPreference(Request $request): JsonResponse
     {
@@ -178,6 +178,6 @@ class AuthController extends Controller
 
         $request->user()->update(['preferred_color' => $data['color'] ?? null]);
 
-        return response()->json(['message' => 'Rangi yako binafsi imehifadhiwa.']);
+        return response()->json(['message' => 'Your personal color preference has been saved.']);
     }
 }

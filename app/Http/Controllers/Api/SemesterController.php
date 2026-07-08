@@ -16,7 +16,7 @@ class SemesterController extends Controller
     }
 
     /**
-     * Admin pekee (angalia routes/api.php - middleware 'role:admin').
+     * Admin only (see routes/api.php - 'role:admin' middleware).
      */
     public function store(Request $request): JsonResponse
     {
@@ -42,7 +42,7 @@ class SemesterController extends Controller
     }
 
     /**
-     * Admin anaweza kuhariri semester (kama alikosea awali).
+     * Admin can edit a semester (in case they made a mistake earlier).
      */
     public function update(Request $request, Semester $semester): JsonResponse
     {

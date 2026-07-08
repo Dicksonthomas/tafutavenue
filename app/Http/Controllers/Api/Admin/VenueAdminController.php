@@ -14,13 +14,13 @@ use Illuminate\Validation\Rule;
 class VenueAdminController extends Controller
 {
     /**
-     * Admin wa kawaida (siyo Super Admin) anaweza tu kufanya kazi na campus
-     * yake mwenyewe - 403 akijaribu campus nyingine.
+     * A regular Admin (not a Super Admin) can only work with their own
+     * campus - 403 if they try another campus.
      */
     private function assertCampusAllowed(Request $request, string $campus): void
     {
         $scope = $request->user()->campusScope();
-        abort_if($scope && $scope !== $campus, 403, 'Unaweza kufanya kazi na campus yako pekee.');
+        abort_if($scope && $scope !== $campus, 403, 'You can only work with your own campus.');
     }
 
     public function index(Request $request): JsonResponse
@@ -36,8 +36,8 @@ class VenueAdminController extends Controller
                         ->orWhere('building', 'like', "%{$q}%");
                 });
             })
-            // Admin wa kawaida amefungiwa campus yake pekee; Super Admin
-            // anaweza kuchuja kwa campus yoyote (au zote).
+            // A regular Admin is confined to their own campus; a Super Admin
+            // can filter by any campus (or none, i.e. all of them).
             ->when($campusScope, fn ($query) => $query->where('campus', $campusScope))
             ->when(! $campusScope && $request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
             ->orderBy('name')
@@ -66,8 +66,8 @@ class VenueAdminController extends Controller
             'restricted_department' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // Admin wa kawaida hawezi kuongeza venue kwa campus tofauti na yake
-        // mwenyewe - tunailazimisha (siyo tu kuikataa) ili fomu isivunjike.
+        // A regular Admin cannot add a venue for a campus other than their
+        // own - we force it (not just reject it) so the form doesn't break.
         if ($campusScope) {
             $data['campus'] = $campusScope;
         }
@@ -105,7 +105,7 @@ class VenueAdminController extends Controller
             'restricted_department' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
-        // Admin wa kawaida hawezi kuihamisha venue kwenda campus nyingine.
+        // A regular Admin cannot move a venue to another campus.
         if ($request->user()->campusScope()) {
             unset($data['campus']);
         }
@@ -126,12 +126,13 @@ class VenueAdminController extends Controller
 
         ActivityLog::record($request->user()->id, 'venue_deleted', "{$request->user()->name} deleted venue {$venueName}.");
 
-        return response()->json(['message' => 'Venue imefutwa.']);
+        return response()->json(['message' => 'Venue deleted.']);
     }
 
     /**
-     * Angalia kama tayari kuna ratiba (timetable slots) kwa semester hii, ili Admin
-     * aambiwe kabla ya kuingiza: 'Update iliyopo' (futa za zamani kwanza) au 'Ongeza mpya'.
+     * Check whether timetable slots already exist for this semester, so the
+     * Admin is asked before importing: "Update existing" (delete the old
+     * ones first) or "Add new".
      */
     public function timetableStatus(Request $request): JsonResponse
     {
@@ -152,11 +153,11 @@ class VenueAdminController extends Controller
     }
 
     /**
-     * Futa kabisa ratiba (timetable slots) ya campus+semester husika, kupitia
-     * yote iliyoingizwa kwa link au CSV - kwa ajili ya kusafisha data mbovu
-     * kabla ya kuingiza upya. Venues zilizoundwa na import (source=timetable_import)
-     * pia zinafutwa, ISIPOKUWA zile zenye bookings za CR (hizo zinabaki ili
-     * historia ya bookings isivunjike).
+     * Permanently delete the timetable (timetable slots) for the given
+     * campus+semester, however it was imported (link or CSV) - for cleaning
+     * up bad data before re-importing. Venues created by the import
+     * (source=timetable_import) are also deleted, EXCEPT those with CR
+     * bookings (those are kept so booking history isn't broken).
      */
     public function clearTimetable(Request $request): JsonResponse
     {
@@ -171,10 +172,10 @@ class VenueAdminController extends Controller
             ->whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
             ->delete();
 
-        // Venue moja inaweza kuwa na timetable_slots za semester NYINGINE
-        // (zisizohusika na kufuta huku) au bookings za CR - hizo ndizo pekee
-        // zinazoifanya isiwe salama kuifuta. Bila ukaguzi huu, venue ambayo
-        // bado inatumika kwenye semester nyingine ingefutwa kimakosa.
+        // A venue can have timetable_slots for ANOTHER semester (unrelated to
+        // this deletion) or CR bookings - those are the only things that make
+        // it unsafe to delete. Without this check, a venue still in use in
+        // another semester would be deleted by mistake.
         $candidateVenueIds = Venue::where('campus', $data['campus'])
             ->where('source', 'timetable_import')
             ->pluck('id');
@@ -193,10 +194,10 @@ class VenueAdminController extends Controller
 
         $venuesKept = $candidateVenueIds->count() - $venuesDeleted;
 
-        $message = "Timetable data imefutwa: schedule entries {$slotsDeleted}, venues {$venuesDeleted}.";
+        $message = "Timetable data deleted: {$slotsDeleted} schedule entries, {$venuesDeleted} venues.";
 
         if ($venuesKept > 0) {
-            $message .= " Venues {$venuesKept} zimebaki kwa sababu bado zina ratiba kwenye semester nyingine au zina bookings za CR.";
+            $message .= " {$venuesKept} venue(s) were kept because they still have a schedule in another semester or have CR bookings.";
         }
 
         ActivityLog::record(
@@ -214,13 +215,14 @@ class VenueAdminController extends Controller
     }
 
     /**
-     * Ingiza ratiba rasmi ya mihadhara (kwa mfano kutoka mutimetable.mzumbe.ac.tz) kupitia
-     * faili la CSV lenye columns: day_of_week,start_time,end_time,venue_name,venue_code,
-     * building,capacity,course_unit,lecturer_name,program
+     * Import the official lecture timetable (e.g. from mutimetable.mzumbe.ac.tz)
+     * via a CSV file with columns: day_of_week,start_time,end_time,venue_name,
+     * venue_code,building,capacity,course_unit,lecturer_name,program
      *
-     * 'mode' => 'replace' hufuta ratiba iliyopo ya semester hii kabla ya kuingiza mpya;
-     * 'add' (default) huongeza bila kufuta zilizopo (zinazofanana zinarukwa).
-     * Venue mpya zisizokuwepo zitaundwa kiotomatiki (source=timetable_import).
+     * 'mode' => 'replace' deletes the existing timetable for this semester
+     * before importing the new one; 'add' (default) adds without deleting
+     * existing entries (matching ones are skipped). New venues that don't
+     * already exist are created automatically (source=timetable_import).
      */
     public function importTimetable(Request $request): JsonResponse
     {
@@ -290,7 +292,7 @@ class VenueAdminController extends Controller
         fclose($handle);
 
         return response()->json([
-            'message' => "Timetable imeingizwa: {$created} zimeundwa, {$skipped} zilirukwa (tayari zipo).",
+            'message' => "Timetable imported: {$created} created, {$skipped} skipped (already exist).",
         ]);
     }
 }

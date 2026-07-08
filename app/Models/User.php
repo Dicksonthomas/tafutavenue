@@ -76,9 +76,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Super Admin "Mkuu" - wa pekee asiyeweza kufutwa/kubadilishwa na
-     * Super Admin wengine walioongezwa (promoted). Tofauti na isSuperAdmin()
-     * ambayo ni kweli kwa Super Admin wote (mkuu na waliopandishwa).
+     * The "Main" Super Admin - the only one who cannot be removed or
+     * changed by other, promoted Super Admins. Unlike isSuperAdmin(), which
+     * is true for all Super Admins (main and promoted).
      */
     public function isMainSuperAdmin(): bool
     {
@@ -86,8 +86,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Campus ambayo Admin huyu anapaswa kuiona TU - null kwa Super Admin
-     * (wanaona campuses zote).
+     * The campus this Admin should ONLY see - null for a Super Admin
+     * (they see all campuses).
      */
     public function campusScope(): ?string
     {

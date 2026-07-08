@@ -28,11 +28,11 @@ class AppServiceProvider extends ServiceProvider
             return new BrevoTransport(config('services.brevo.key'));
         });
 
-        // mail.dtech.co.tz ni shared hosting - cheti chake cha SSL kimesajiliwa
-        // kwa jina la server ya hosting (siyo "mail.dtech.co.tz" lenyewe), hivyo
-        // hostname verification ya kawaida ya Laravel inashindwa hata kama
-        // credentials ni sahihi. Tunajenga SMTP transport wenyewe hapa ili
-        // kuzima "verify_peer_name" pekee (cheti chenyewe bado kinathibitishwa).
+        // mail.dtech.co.tz is shared hosting - its SSL certificate is issued
+        // for the hosting server's own name (not "mail.dtech.co.tz" itself),
+        // so Laravel's normal hostname verification fails even when the
+        // credentials are correct. We build the SMTP transport ourselves here
+        // to disable only "verify_peer_name" (the certificate itself is still verified).
         Mail::extend('smtp', function (array $config = []) {
             $config = array_merge(config('mail.mailers.smtp'), $config);
             $scheme = $config['scheme'] ?? (($config['port'] ?? null) == 465 ? 'smtps' : 'smtp');

@@ -12,8 +12,8 @@ class CrEmailGenerator
     public const MIN_INTAKE_YEAR = 2022;
 
     /**
-     * Mwaka mpya wa usajili (intake) huanza rasmi Oktoba. Kabla ya hapo,
-     * Reg No za mwaka huo bado hazijaruhusiwa (wanafunzi hawajaanza rasmi).
+     * A new intake year officially starts in October. Before that, Reg No
+     * entries for that year are not yet allowed (students haven't officially started).
      */
     public static function maxIntakeYear(): int
     {
@@ -23,13 +23,14 @@ class CrEmailGenerator
     }
 
     /**
-     * Tengeneza email kutoka Fullname + Reg No, mfano:
+     * Generate an email from Fullname + Reg No, e.g.:
      *   name = "Dickson Musa Thomas", reg_no = "14322055/T.25"
      *   -> "dickson.thomas25@mustudent.ac.tz"
      *
-     * Reg No lazima iishie na ".YY" (mwaka wa mwisho wa usajili, tarakimu 2).
-     * Mwaka ukiwa chini ya MIN_INTAKE_YEAR, tunatupa InvalidArgumentException
-     * ili Admin awasiliane na CR na kumsajili kwa namna nyingine (mfano email ya mkono).
+     * The Reg No must end with ".YY" (the last two digits of the intake
+     * year). If the year is before MIN_INTAKE_YEAR, we throw an
+     * InvalidArgumentException so the Admin can contact the CR and register
+     * them another way (e.g. a manual email).
      *
      * @return array{email: string, year: int}
      */
@@ -37,7 +38,7 @@ class CrEmailGenerator
     {
         if (! preg_match('/\.(\d{2})$/', trim($regNo), $matches)) {
             throw new InvalidArgumentException(
-                'Reg No si sahihi. Muundo sahihi ni mfano: 14322055/T.25 (lazima uishie na nukta na tarakimu mbili za mwaka).'
+                'Reg No is invalid. The correct format is e.g.: 14322055/T.25 (must end with a dot and two digits for the year).'
             );
         }
 
@@ -45,7 +46,7 @@ class CrEmailGenerator
 
         if ($year < self::MIN_INTAKE_YEAR) {
             throw new InvalidArgumentException(
-                "Reg No hii ina mwaka wa usajili wa nyuma sana ({$year}). Tafadhali wasiliane na Admin ili akusajili kwa namna nyingine."
+                "This Reg No has a registration year that is too old ({$year}). Please contact the Admin to register you another way."
             );
         }
 
@@ -53,14 +54,14 @@ class CrEmailGenerator
 
         if ($year > $maxYear) {
             throw new InvalidArgumentException(
-                "Reg No ya mwaka {$year} bado haijaruhusiwa. Usajili wa mwaka huo unafunguliwa rasmi Oktoba {$year}."
+                "Reg No for year {$year} is not yet allowed. Registration for that year officially opens in October {$year}."
             );
         }
 
         $parts = preg_split('/\s+/', trim($fullName), -1, PREG_SPLIT_NO_EMPTY);
 
         if (count($parts) < 1) {
-            throw new InvalidArgumentException('Jina si sahihi.');
+            throw new InvalidArgumentException('Name is invalid.');
         }
 
         $first = self::slug($parts[0]);

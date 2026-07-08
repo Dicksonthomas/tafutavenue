@@ -11,13 +11,13 @@ use Illuminate\Http\Request;
 class BookingAdminController extends Controller
 {
     /**
-     * Admin wa kawaida anaona/anasimamia bookings za campus yake pekee
-     * (kupitia venue.campus) - Super Admin anaona zote.
+     * A regular Admin only sees/manages bookings for their own campus
+     * (via venue.campus) - a Super Admin sees all of them.
      */
     private function assertBookingCampusAllowed(Request $request, Booking $booking): void
     {
         $scope = $request->user()->campusScope();
-        abort_if($scope && $booking->venue?->campus !== $scope, 403, 'Unaweza kusimamia bookings za campus yako pekee.');
+        abort_if($scope && $booking->venue?->campus !== $scope, 403, 'You can only manage bookings for your own campus.');
     }
 
     public function index(Request $request): JsonResponse
@@ -41,7 +41,7 @@ class BookingAdminController extends Controller
     public function approve(Request $request, Booking $booking): JsonResponse
     {
         $this->assertBookingCampusAllowed($request, $booking);
-        abort_unless($booking->status === 'pending', 422, 'Booking hii tayari imeshughulikiwa.');
+        abort_unless($booking->status === 'pending', 422, 'This booking has already been handled.');
 
         $booking->update([
             'status' => 'approved',
@@ -52,7 +52,7 @@ class BookingAdminController extends Controller
         ActivityLog::record(
             $request->user()->id,
             'booking_approved',
-            "Admin ameidhinisha booking ya {$booking->venue->name} kwa {$booking->user->name}.",
+            "Admin approved the booking of {$booking->venue->name} for {$booking->user->name}.",
             $booking->id
         );
 
@@ -62,7 +62,7 @@ class BookingAdminController extends Controller
     public function reject(Request $request, Booking $booking): JsonResponse
     {
         $this->assertBookingCampusAllowed($request, $booking);
-        abort_unless($booking->status === 'pending', 422, 'Booking hii tayari imeshughulikiwa.');
+        abort_unless($booking->status === 'pending', 422, 'This booking has already been handled.');
 
         $data = $request->validate([
             'rejection_reason' => ['required', 'string', 'max:500'],
@@ -78,7 +78,7 @@ class BookingAdminController extends Controller
         ActivityLog::record(
             $request->user()->id,
             'booking_rejected',
-            "Admin amekataa booking ya {$booking->venue->name} kwa {$booking->user->name}: {$data['rejection_reason']}",
+            "Admin rejected the booking of {$booking->venue->name} for {$booking->user->name}: {$data['rejection_reason']}",
             $booking->id
         );
 
@@ -86,9 +86,9 @@ class BookingAdminController extends Controller
     }
 
     /**
-     * Futa kabisa rekodi ya booking MOJA - inaruhusiwa kwa status yoyote
-     * (pending/approved/rejected/cancelled), tofauti na cancel() ya CR ambayo
-     * ni "soft" (inabadilisha status tu, siyo kufuta).
+     * Permanently delete a SINGLE booking record - allowed for any status
+     * (pending/approved/rejected/cancelled), unlike the CR's cancel() which
+     * is "soft" (it just changes the status, doesn't delete).
      */
     public function destroy(Request $request, Booking $booking): JsonResponse
     {
@@ -106,13 +106,13 @@ class BookingAdminController extends Controller
             "{$request->user()->name} permanently deleted a {$status} booking of {$venueName} by {$userName}."
         );
 
-        return response()->json(['message' => 'Booking imefutwa.']);
+        return response()->json(['message' => 'Booking deleted.']);
     }
 
     /**
-     * Futa rekodi ZOTE za bookings zinazolingana na filters za sasa
-     * (status/date/venue), kama inavyofanya index() - zimefungiwa campus
-     * ya Admin (kama siyo Super Admin).
+     * Permanently delete ALL booking records matching the current filters
+     * (status/date/venue), same as index() - restricted to the Admin's
+     * campus (unless they are a Super Admin).
      */
     public function destroyAll(Request $request): JsonResponse
     {
@@ -139,6 +139,6 @@ class BookingAdminController extends Controller
             "{$request->user()->name} permanently deleted {$count} booking(s) {$scope}."
         );
 
-        return response()->json(['message' => "Bookings {$count} zimefutwa.", 'deleted' => $count]);
+        return response()->json(['message' => "{$count} booking(s) deleted.", 'deleted' => $count]);
     }
 }

@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\DB;
 class ReportController extends Controller
 {
     /**
-     * Tafsiri 'range' kuwa [tarehe_ya_kuanzia, tarehe_ya_mwisho] (null = hakuna kikomo).
-     * Chaguo: today, yesterday, this_week, this_month, all.
+     * Translate 'range' into [start_date, end_date] (null = no limit).
+     * Options: today, yesterday, this_week, this_month, all.
      */
     private function rangeToDates(string $range): array
     {
@@ -36,7 +36,7 @@ class ReportController extends Controller
     }
 
     /**
-     * Muhtasari wa jumla: idadi ya bookings kwa status, venue zinazotumika zaidi, n.k.
+     * General summary: number of bookings by status, most-used venues, etc.
      * Query param 'range' => today | yesterday | this_week | this_month | all (default).
      */
     public function summary(Request $request): JsonResponse
@@ -98,12 +98,12 @@ class ReportController extends Controller
     }
 
     /**
-     * Ripoti ya matumizi ya venue moja kwa kipindi fulani.
+     * Usage report for a single venue over a given period.
      */
     public function venueUsage(Request $request, Venue $venue): JsonResponse
     {
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $venue->campus !== $campusScope, 403, 'Unaweza kuona ripoti za campus yako pekee.');
+        abort_if($campusScope && $venue->campus !== $campusScope, 403, 'You can only view reports for your own campus.');
 
         $bookings = $venue->bookings()
             ->with('user:id,name,program')
@@ -119,7 +119,7 @@ class ReportController extends Controller
     }
 
     /**
-     * Query ya bookings iliyochujwa (status/date/venue), inatumika na exports zote mbili.
+     * Filtered bookings query (status/date/venue), used by both exports.
      */
     private function filteredBookingsQuery(Request $request): Builder
     {
@@ -135,14 +135,14 @@ class ReportController extends Controller
     }
 
     /**
-     * Pakua ripoti ya bookings zote (PDF), ikichujwa na status/date/venue kama
-     * inavyofanya BookingAdminController::index.
+     * Download the full bookings report (PDF), filtered by status/date/venue
+     * the same way BookingAdminController::index does.
      */
     public function exportBookingsPdf(Request $request): Response|JsonResponse
     {
-        // Kuzalisha PDF ya jedwali kubwa kunaweza kutumia muda/memory zaidi ya
-        // default za baadhi ya hosting (mfano Railway) - ongeza kikomo kwa
-        // request hii pekee ili isikatike katikati.
+        // Generating a PDF for a large table can use more time/memory than
+        // some hosting defaults allow (e.g. Railway) - raise the limit for
+        // this request only so it doesn't get cut off midway.
         @ini_set('memory_limit', '512M');
         @set_time_limit(60);
 
@@ -157,17 +157,17 @@ class ReportController extends Controller
 
             return $pdf->download('bookings_report.pdf');
         } catch (\Throwable $e) {
-            Log::error('PDF export ya bookings imeshindikana: '.$e->getMessage(), ['exception' => $e]);
+            Log::error('Bookings PDF export failed: '.$e->getMessage(), ['exception' => $e]);
 
             return response()->json([
-                'message' => 'Imeshindikana kutengeneza PDF. Jaribu tena au wasiliana na msimamizi wa mfumo.',
+                'message' => 'Failed to generate PDF. Try again or contact the system administrator.',
             ], 500);
         }
     }
 
     /**
-     * Pakua ripoti ya bookings zote (CSV), ikichujwa na status/date/venue kama
-     * inavyofanya BookingAdminController::index.
+     * Download the full bookings report (CSV), filtered by status/date/venue
+     * the same way BookingAdminController::index does.
      */
     public function exportBookings(Request $request): StreamedResponse
     {

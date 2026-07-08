@@ -12,16 +12,16 @@ class MzumbeTimetableScraper
     private const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
     /**
-     * Vuta venues na ratiba kutoka kwenye URL ya index ya timetable ya Mzumbe
-     * (Mimosa scheduling export) na kuziingiza kwenye Semester husika.
+     * Fetch venues and schedules from a Mzumbe timetable index URL (Mimosa
+     * scheduling export) and import them into the given Semester.
      *
      * @return array{venues: int, slots_created: int, failed: array<int, string>}
      */
     public function importFromUrl(string $baseUrl, Semester $semester, string $campus, ?callable $onProgress = null): array
     {
-        // Campus zingine zina venues nyingi zaidi (kila moja inahitaji HTTP fetch
-        // yake), hivyo import inaweza kuchukua muda mrefu kuliko default PHP
-        // execution time limit - ondoa kikomo hicho kwa request hii.
+        // Some campuses have many more venues (each needs its own HTTP
+        // fetch), so the import can take longer than the default PHP
+        // execution time limit - remove that limit for this request.
         if (function_exists('set_time_limit')) {
             @set_time_limit(0);
         }
@@ -31,13 +31,13 @@ class MzumbeTimetableScraper
         $indexHtml = $this->fetch($baseUrl.'index.htm') ?? $this->fetch($baseUrl);
 
         if (! $indexHtml) {
-            throw new \RuntimeException('Imeshindikana kupakua index page ya timetable. Hakikisha URL ni sahihi.');
+            throw new \RuntimeException('Failed to download the timetable index page. Make sure the URL is correct.');
         }
 
         $venues = $this->extractVenues($indexHtml);
 
         if (empty($venues)) {
-            throw new \RuntimeException('Hakuna venues zilizopatikana kwenye URL hii. Hakikisha ni ukurasa sahihi wa Mimosa timetable (index.htm).');
+            throw new \RuntimeException('No venues were found at this URL. Make sure it is the correct Mimosa timetable page (index.htm).');
         }
 
         $totalSlots = 0;
@@ -88,8 +88,9 @@ class MzumbeTimetableScraper
                     }
                 }
             } catch (\Throwable) {
-                // Ukurasa wa venue hii una muundo tofauti/umeharibika - ruka na
-                // uendelee na venue nyingine badala ya kusimamisha import nzima.
+                // This venue's page has a different/broken structure - skip
+                // it and continue with the next venue instead of stopping
+                // the whole import.
                 $failed[] = $venueInfo['name'];
             }
 
@@ -161,8 +162,8 @@ class MzumbeTimetableScraper
     }
 
     /**
-     * Chakata jedwali la ratiba la venue moja (siku x muda), tukizingatia
-     * rowspan (idadi ya masaa) ya kila kiini chenye somo.
+     * Parse the schedule table for a single venue (day x time), accounting
+     * for the rowspan (number of hours) of each cell that has a course.
      *
      * @return array<int, array{day: string, start_time: string, end_time: string, course_unit: ?string, lecturer_name: ?string, program: ?string}>
      */
@@ -183,7 +184,7 @@ class MzumbeTimetableScraper
         $entries = [];
         $columnSkip = array_fill(0, 5, 0);
 
-        // Row 0 = title, Row 1 = day headers -> data huanza row 2
+        // Row 0 = title, Row 1 = day headers -> data starts at row 2
         for ($r = 2; $r < $rows->length; $r++) {
             $row = $rows->item($r);
             $tds = $xpath->query('td', $row);
@@ -241,11 +242,11 @@ class MzumbeTimetableScraper
                     $lecturer = $names ? implode(', ', $names) : null;
                 }
 
-                // Baadhi ya campus (Dar es Salaam, Tanga, Mbeya) hazitumii maneno
-                // "Venue"/"Lecturer" kwenye kiini cha ratiba - mfano:
-                // "ACC 121T BAF-BS 1A(#100) CR10 (#108) MR. KISHAMBA" - jina la
-                // venue lenyewe (pamoja na #id yake) ndilo linalotenganisha
-                // program (kabla yake) na lecturer (baada yake).
+                // Some campuses (Dar es Salaam, Tanga, Mbeya) don't use the
+                // words "Venue"/"Lecturer" in the schedule cell - e.g.:
+                // "ACC 121T BAF-BS 1A(#100) CR10 (#108) MR. KISHAMBA" - the
+                // venue's own name (with its #id) is what separates the
+                // program (before it) from the lecturer (after it).
                 if (($program === null || $lecturer === null)
                     && preg_match('/^\s*(.*?)\s*'.preg_quote($venueName, '/').'\s*\(#\d+\)\s*(.*)$/iu', $afterCourse, $vm)) {
                     if ($program === null) {

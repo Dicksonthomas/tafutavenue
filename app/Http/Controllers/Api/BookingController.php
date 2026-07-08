@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
 class BookingController extends Controller
 {
     /**
-     * Bookings za CR aliye-login.
+     * Bookings belonging to the logged-in CR.
      */
     public function index(Request $request): JsonResponse
     {
@@ -36,16 +36,17 @@ class BookingController extends Controller
         abort_unless(
             $booking->user_id === $request->user()->id || $request->user()->isAdmin(),
             403,
-            'Huna ruhusa ya kuona booking hii.'
+            'You do not have permission to view this booking.'
         );
 
         return response()->json($booking->load(['venue', 'semester', 'approver']));
     }
 
     /**
-     * Tengeneza booking mpya. Kabla ya kuhifadhi, tunahakikisha muda uliochaguliwa
-     * haujagongana na Timetable Slot (mihadhara rasmi) wala Booking nyingine iliyopo
-     * (pending/approved) kwa venue hiyo - hii ndiyo inayozuia 'double booking'.
+     * Create a new booking. Before saving, we make sure the selected time
+     * doesn't clash with a Timetable Slot (official lecture) or another
+     * existing Booking (pending/approved) for that venue - this is what
+     * prevents "double booking".
      */
     public function store(Request $request): JsonResponse
     {
@@ -62,10 +63,10 @@ class BookingController extends Controller
 
         $dayOfWeek = Carbon::parse($data['booking_date'])->format('l');
 
-        // "00:00" kwenye ombi la mtumiaji inamaanisha "hadi usiku wa manane" (mwisho
-        // wa siku). Tunaihifadhi kama "23:59" badala yake kwa sababu comparisons
-        // zote za mgongano (overlapping) kwenye mfumo ni za muda wa siku moja tu
-        // (hazina dhana ya kuvuka siku) - "00:00" ingevunja comparisons hizo.
+        // "00:00" in the user's request means "until midnight" (end of day).
+        // We store it as "23:59" instead because all overlap comparisons in
+        // the system are for a single day's time range (they have no concept
+        // of crossing into the next day) - "00:00" would break those comparisons.
         if ($data['end_time'] === '00:00') {
             $data['end_time'] = '23:59';
         }
@@ -93,19 +94,19 @@ class BookingController extends Controller
 
         if ($venue->status !== 'available') {
             return response()->json([
-                'message' => 'Venue hii haipatikani kwa sasa (maintenance/disabled).',
+                'message' => 'This venue is currently unavailable (maintenance/disabled).',
             ], 422);
         }
 
         if (! $venue->allowsPurpose($data['purpose'])) {
             return response()->json([
-                'message' => "Venue {$venue->name} haziruhusiwi kwa ajili ya ".str_replace('_', ' ', $data['purpose']).'.',
+                'message' => "Venue {$venue->name} is not allowed for ".str_replace('_', ' ', $data['purpose']).'.',
             ], 422);
         }
 
         if (! $venue->allowsUser($request->user())) {
             return response()->json([
-                'message' => "Venue {$venue->name} ina masharti maalum (campus/level/department) ambayo huna ruhusa nayo.",
+                'message' => "Venue {$venue->name} has special restrictions (campus/level/department) that you don't meet.",
             ], 403);
         }
 
@@ -118,7 +119,7 @@ class BookingController extends Controller
 
         if ($clashesWithTimetable) {
             return response()->json([
-                'message' => 'Muda huu tayari una mhadhara rasmi (timetable) kwenye venue hii.',
+                'message' => 'This time slot already has an official lecture (timetable) at this venue.',
             ], 409);
         }
 
@@ -130,23 +131,23 @@ class BookingController extends Controller
         )->with('user:id,name')->first();
 
         if ($conflictingBooking) {
-            $conflictMessage = "Venue {$venue->name} tayari imeshabookiwa na {$conflictingBooking->user->name} "
-                ."kuanzia {$conflictingBooking->start_time} hadi {$conflictingBooking->end_time} tarehe "
+            $conflictMessage = "Venue {$venue->name} is already booked by {$conflictingBooking->user->name} "
+                ."from {$conflictingBooking->start_time} to {$conflictingBooking->end_time} on "
                 .Carbon::parse($conflictingBooking->booking_date)->format('d/m/Y').'.';
 
             ActivityLog::record(
                 $request->user()->id,
                 'booking_conflict',
-                "{$request->user()->name} alijaribu ku-book {$venue->name} lakini iligongana na booking ya {$conflictingBooking->user->name}.",
+                "{$request->user()->name} attempted to book {$venue->name} but it conflicted with a booking by {$conflictingBooking->user->name}.",
                 $conflictingBooking->id
             );
 
             return response()->json(['message' => $conflictMessage], 409);
         }
 
-        // Hakuna mgongano wowote uliopatikana (tayari umekaguliwa hapo juu dhidi ya
-        // timetable na bookings nyingine), kwa hiyo booking inaidhinishwa (approved)
-        // moja kwa moja bila kusubiri Admin - mfumo wenyewe ndio umeshathibitisha.
+        // No conflict was found (already checked above against the timetable
+        // and other bookings), so the booking is approved immediately without
+        // waiting for an Admin - the system itself has already verified it.
         $booking = Booking::create([
             ...$data,
             'user_id' => $request->user()->id,
@@ -160,8 +161,8 @@ class BookingController extends Controller
         ActivityLog::record(
             $request->user()->id,
             'booking_created',
-            "{$booking->user->name} ame-book {$booking->venue->name} tarehe ".Carbon::parse($booking->booking_date)->format('d/m/Y')
-                ." kuanzia {$booking->start_time} hadi {$booking->end_time} (auto-approved).",
+            "{$booking->user->name} booked {$booking->venue->name} on ".Carbon::parse($booking->booking_date)->format('d/m/Y')
+                ." from {$booking->start_time} to {$booking->end_time} (auto-approved).",
             $booking->id
         );
 
@@ -171,16 +172,16 @@ class BookingController extends Controller
     }
 
     /**
-     * 'Digital Signature/Confirmation' - CR anathibitisha booking yake baada ya
-     * kuidhinishwa na Admin (status = approved).
+     * "Digital Signature/Confirmation" - the CR confirms their booking after
+     * it has been approved by an Admin (status = approved).
      */
     public function sign(Request $request, Booking $booking): JsonResponse
     {
-        abort_unless($booking->user_id === $request->user()->id, 403, 'Huna ruhusa.');
+        abort_unless($booking->user_id === $request->user()->id, 403, 'You do not have permission.');
 
         if ($booking->status !== 'approved') {
             return response()->json([
-                'message' => 'Booking lazima iwe imeidhinishwa (approved) kabla ya kutia saini.',
+                'message' => 'The booking must be approved before signing.',
             ], 422);
         }
 
@@ -198,12 +199,12 @@ class BookingController extends Controller
 
     public function cancel(Request $request, Booking $booking): JsonResponse
     {
-        abort_unless($booking->user_id === $request->user()->id, 403, 'Huna ruhusa.');
+        abort_unless($booking->user_id === $request->user()->id, 403, 'You do not have permission.');
 
         abort_if(
             in_array($booking->status, ['cancelled', 'rejected']),
             422,
-            'Booking hii tayari imefungwa.'
+            'This booking is already closed.'
         );
 
         $booking->update(['status' => 'cancelled']);

@@ -22,7 +22,7 @@ class CrCredentialsMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Taarifa za Akaunti Yako - University Venue Booking System',
+            subject: 'Your Account Details - University Venue Booking System',
         );
     }
 

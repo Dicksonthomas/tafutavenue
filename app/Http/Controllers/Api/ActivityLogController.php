@@ -12,14 +12,14 @@ use Illuminate\Http\Request;
 class ActivityLogController extends Controller
 {
     /**
-     * Query ya logs zinazoruhusiwa kuonekana na $viewer (kabla ya filters
-     * nyingine za ziada kama 'action').
+     * Query of logs the $viewer is allowed to see (before any additional
+     * filters like 'action').
      *
-     * Visibility kwa Admin walioingia:
-     * - Logs zisizo na actor anayejulikana (user_id null): daima zinaonekana.
-     * - Logs za CR: zinaonekana kwa Admin wote.
-     * - Logs za Admin wa kawaida: zinaonekana kwa Admin wote (super au la).
-     * - Logs za Super Admin: zinaonekana kwa Super Admin mwenyewe TU.
+     * Visibility for logged-in Admins:
+     * - Logs with no known actor (user_id null): always visible.
+     * - CR logs: visible to all Admins.
+     * - Regular Admin logs: visible to all Admins (super or not).
+     * - Super Admin logs: visible ONLY to that Super Admin themselves.
      */
     private function visibleQuery(User $viewer): Builder
     {
@@ -39,9 +39,9 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Route hii ni Admin PEKEE (imelindwa na middleware 'admin') - CR hawana
-     * ufikiaji wa logs kabisa. Query param 'action' (hiari) - chuja kwa aina
-     * mahususi ya action (mfano 'login_success').
+     * This route is Admin ONLY (protected by the 'admin' middleware) - CRs
+     * have no access to logs at all. Optional 'action' query param - filter
+     * by a specific action type (e.g. 'login_success').
      */
     public function index(Request $request): JsonResponse
     {
@@ -58,8 +58,8 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Orodha ya "actions" za kipekee zilizopo (kwa ajili ya dropdown ya filter),
-     * ikizingatia logs zinazoonekana kwa $viewer pekee.
+     * List of distinct "actions" that exist (for the filter dropdown),
+     * restricted to logs visible to $viewer only.
      */
     public function actions(Request $request): JsonResponse
     {
@@ -72,8 +72,8 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Futa log MOJA - inaruhusiwa tu kama log hiyo inaonekana kwa $viewer
-     * (Admin wa kawaida hawezi kufuta log ya Super Admin asiyoiona kabisa).
+     * Delete a SINGLE log - only allowed if that log is visible to $viewer
+     * (a regular Admin cannot delete a Super Admin log they can't even see).
      */
     public function destroy(Request $request, ActivityLog $log): JsonResponse
     {
@@ -84,12 +84,12 @@ class ActivityLogController extends Controller
 
         $log->delete();
 
-        return response()->json(['message' => 'Log imefutwa.']);
+        return response()->json(['message' => 'Log deleted.']);
     }
 
     /**
-     * Futa logs ZOTE zinazoonekana kwa $viewer, zikichujwa na 'action' kama
-     * imetolewa (vinginevyo zote zinazoonekana kwake zinafutwa).
+     * Delete ALL logs visible to $viewer, filtered by 'action' if provided
+     * (otherwise every log visible to them is deleted).
      */
     public function destroyAll(Request $request): JsonResponse
     {
@@ -97,6 +97,6 @@ class ActivityLogController extends Controller
             ->when($request->filled('action'), fn ($q) => $q->where('action', $request->string('action')))
             ->delete();
 
-        return response()->json(['message' => "Logs {$count} zimefutwa.", 'deleted' => $count]);
+        return response()->json(['message' => "{$count} log(s) deleted.", 'deleted' => $count]);
     }
 }

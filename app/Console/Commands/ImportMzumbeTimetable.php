@@ -10,19 +10,19 @@ class ImportMzumbeTimetable extends Command
 {
     protected $signature = 'app:import-mzumbe-timetable {semester_id} {--url=https://mutimetable.mzumbe.ac.tz/timetables/teaching/semestertwo_2025_2026_all_programmes/} {--campus=morogoro_main}';
 
-    protected $description = 'Vuta venues na ratiba ya mihadhara (course/lecturer/muda) kutoka mutimetable.mzumbe.ac.tz na kuziingiza kwenye database';
+    protected $description = 'Fetch venues and lecture schedules (course/lecturer/time) from mutimetable.mzumbe.ac.tz and import them into the database';
 
     public function handle(MzumbeTimetableScraper $scraper): int
     {
         $semester = Semester::find($this->argument('semester_id'));
 
         if (! $semester) {
-            $this->error('Semester haipo. Angalia semester_id.');
+            $this->error('Semester not found. Check the semester_id.');
 
             return self::FAILURE;
         }
 
-        $this->info('Inaanza kuvuta timetable...');
+        $this->info('Starting timetable import...');
 
         $bar = null;
 
@@ -36,7 +36,7 @@ class ImportMzumbeTimetable extends Command
             return self::FAILURE;
         }
 
-        $this->info("Imekamilika: venues={$result['venues']}, timetable slots mpya={$result['slots_created']}");
+        $this->info("Done: venues={$result['venues']}, new timetable slots={$result['slots_created']}");
 
         return self::SUCCESS;
     }

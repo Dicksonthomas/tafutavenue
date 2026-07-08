@@ -9,8 +9,8 @@ use Symfony\Component\Mailer\Transport\AbstractTransport;
 use Symfony\Component\Mime\Email;
 
 /**
- * Brevo (zamani Sendinblue) hutuma email kupitia HTTPS API (siyo SMTP),
- * kwa sababu Railway inazuia muunganiko wa SMTP (port 587/465) kwenda nje.
+ * Brevo (formerly Sendinblue) sends email via an HTTPS API (not SMTP),
+ * because Railway blocks outbound SMTP connections (port 587/465).
  */
 class BrevoTransport extends AbstractTransport
 {
@@ -24,7 +24,7 @@ class BrevoTransport extends AbstractTransport
         $email = $message->getOriginalMessage();
 
         if (! $email instanceof Email) {
-            throw new TransportException('BrevoTransport inasapoti tu Symfony Mime Email.');
+            throw new TransportException('BrevoTransport only supports Symfony Mime Email.');
         }
 
         $from = $email->getFrom()[0];
@@ -53,7 +53,7 @@ class BrevoTransport extends AbstractTransport
         ])->post('https://api.brevo.com/v3/smtp/email', $payload);
 
         if ($response->failed()) {
-            throw new TransportException('Brevo API imeshindwa kutuma email: '.$response->body());
+            throw new TransportException('Brevo API failed to send email: '.$response->body());
         }
     }
 

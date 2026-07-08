@@ -14,8 +14,8 @@ use Illuminate\Http\Request;
 class VenueController extends Controller
 {
     /**
-     * Muhtasari wa haraka wa siku ya leo - CR akiingia tu anaona idadi ya
-     * venues 'free' na 'booked' bila kuchagua chochote.
+     * Quick overview of today - as soon as the CR logs in they see the
+     * number of 'free' and 'booked' venues without choosing anything.
      */
     public function todayOverview(Request $request): JsonResponse
     {
@@ -54,8 +54,8 @@ class VenueController extends Controller
     }
 
     /**
-     * Orodha ya venues zote zinazotumika (kwa ajili ya taarifa za jumla, si availability).
-     * Inaruhusu ?q= kutafuta kwa jina au namba/code ya venue (mfano "Ntare 108").
+     * List of all usable venues (for general information, not availability).
+     * Allows ?q= to search by venue name or number/code (e.g. "Ntare 108").
      */
     public function index(Request $request): JsonResponse
     {
@@ -76,11 +76,11 @@ class VenueController extends Controller
     }
 
     /**
-     * KIINI CHA MFUMO: onyesha 'Available Venues' kwa Semester + Tarehe + Muda (start/end time)
-     * uliochaguliwa na CR. Venue inahesabika 'available' kama:
-     *   1) Status yake si 'maintenance' au 'disabled', NA
-     *   2) Haigongani na Timetable Slot yoyote (ratiba rasmi ya mihadhara - kutoka Mzumbe timetable), NA
-     *   3) Haigongani na Booking nyingine (pending/approved) ya CR wengine kwa tarehe/muda huo.
+     * CORE OF THE SYSTEM: show 'Available Venues' for the Semester + Date + Time
+     * (start/end time) chosen by the CR. A venue counts as 'available' if:
+     *   1) Its status is not 'maintenance' or 'disabled', AND
+     *   2) It doesn't clash with any Timetable Slot (official lecture schedule - from the Mzumbe timetable), AND
+     *   3) It doesn't clash with another Booking (pending/approved) from other CRs for that date/time.
      *
      * Query params: semester_id, date (YYYY-MM-DD), start_time (HH:MM), end_time (HH:MM)
      */
@@ -95,7 +95,7 @@ class VenueController extends Controller
 
         if (! Semester::where('id', $data['semester_id'])->where('is_active', true)->exists()) {
             return response()->json([
-                'message' => 'Semester hii siyo active kwa sasa. Chagua semester iliyo active.',
+                'message' => 'This semester is not currently active. Choose an active semester.',
                 'venues' => [],
             ], 200);
         }
@@ -132,8 +132,9 @@ class VenueController extends Controller
             ], 200);
         }
 
-        // Kwa kila venue, hesabu muda kamili ilio 'free' (siyo tu muda ulioombwa),
-        // ili CR aone mfano "Free 09:00-11:00" badala ya muda mmoja tu aliouliza.
+        // For each venue, compute the full time range that is 'free' (not just
+        // the requested time), so the CR sees e.g. "Free 09:00-11:00" instead
+        // of only the single time slot they asked about.
         $allTimetable = TimetableSlot::where('semester_id', $data['semester_id'])
             ->where('day_of_week', $dayOfWeek)
             ->whereIn('venue_id', $availableVenues->pluck('id'))
@@ -174,8 +175,9 @@ class VenueController extends Controller
     }
 
     /**
-     * 'Booked Venues' - ratiba ya venues zilizoshikwa (asubuhi hadi jioni) kwa tarehe fulani,
-     * ikichanganya Timetable Slots (mihadhara rasmi) na Bookings (za CR).
+     * 'Booked Venues' - the schedule of occupied venues (morning to evening)
+     * for a given date, combining Timetable Slots (official lectures) and
+     * Bookings (from CRs).
      */
     public function booked(Request $request): JsonResponse
     {

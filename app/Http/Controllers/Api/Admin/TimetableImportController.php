@@ -13,12 +13,15 @@ use Illuminate\Validation\Rule;
 class TimetableImportController extends Controller
 {
     /**
-     * Admin anabandika link ya semester husika kutoka mutimetable.mzumbe.ac.tz
-     * (mfano https://mutimetable.mzumbe.ac.tz/timetables/teaching/semestertwo_2025_2026_all_programmes/)
-     * na mfumo unavuta venues + ratiba (course/lecturer/muda) moja kwa moja.
+     * Admin pastes the link for the relevant semester from
+     * mutimetable.mzumbe.ac.tz (e.g.
+     * https://mutimetable.mzumbe.ac.tz/timetables/teaching/semestertwo_2025_2026_all_programmes/)
+     * and the system pulls in venues + the schedule (course/lecturer/time)
+     * automatically.
      *
-     * 'mode' => 'replace' hufuta ratiba iliyopo ya semester hii kwanza (ili isijichanganye
-     * na ile mpya); 'add' (default) huongeza tu bila kufuta zilizopo.
+     * 'mode' => 'replace' first deletes the existing timetable for this
+     * semester (so it doesn't mix with the new one); 'add' (default) just
+     * adds without deleting what already exists.
      */
     public function importFromLink(Request $request, MzumbeTimetableScraper $scraper): JsonResponse
     {
@@ -30,7 +33,7 @@ class TimetableImportController extends Controller
         ]);
 
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $campusScope !== $data['campus'], 403, 'Unaweza kufanya kazi na campus yako pekee.');
+        abort_if($campusScope && $campusScope !== $data['campus'], 403, 'You can only work with your own campus.');
 
         $semester = Semester::findOrFail($data['semester_id']);
 
@@ -46,10 +49,10 @@ class TimetableImportController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $message = "Timetable imevutwa: venues {$result['venues']}, timetable slots mpya {$result['slots_created']}.";
+        $message = "Timetable imported: {$result['venues']} venues, {$result['slots_created']} new timetable slots.";
 
         if (! empty($result['failed'])) {
-            $message .= ' Venues zilizoshindikana: '.implode(', ', $result['failed']).'.';
+            $message .= ' Venues that failed: '.implode(', ', $result['failed']).'.';
         }
 
         return response()->json([

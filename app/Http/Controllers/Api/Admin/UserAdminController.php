@@ -26,8 +26,8 @@ class UserAdminController extends Controller
     private const VALID_LEVELS = ['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'];
 
     /**
-     * Query ya CR iliyochujwa (q/campus/faculty/department/program/level/
-     * year_of_study/sex), inatumika na index() na exportPdf().
+     * Filtered CR query (q/campus/faculty/department/program/level/
+     * year_of_study/sex), used by both index() and exportPdf().
      */
     private function filteredUsersQuery(Request $request): Builder
     {
@@ -44,8 +44,9 @@ class UserAdminController extends Controller
                         ->orWhere('program', 'like', "%{$q}%");
                 });
             })
-            // Admin wa kawaida amefungiwa campus yake pekee (filter ya 'campus'
-            // kwenye request inapuuzwa kwake); Super Admin anachuja kwa hiari.
+            // A regular Admin is confined to their own campus (the 'campus'
+            // filter in the request is ignored for them); a Super Admin can
+            // filter freely.
             ->when($campusScope, fn ($query) => $query->where('campus', $campusScope))
             ->when(! $campusScope && $request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
             ->when($request->filled('faculty'), fn ($query) => $query->where('faculty', $request->string('faculty')))
@@ -58,7 +59,7 @@ class UserAdminController extends Controller
     }
 
     /**
-     * Orodha ya CR wote (kwa ajili ya Admin kuona/kutafuta).
+     * List of all CRs (for the Admin to view/search).
      */
     public function index(Request $request): JsonResponse
     {
@@ -71,8 +72,8 @@ class UserAdminController extends Controller
     }
 
     /**
-     * Pakua orodha ya CR (PDF) iliyochujwa kama index(), ikiwa na CR wote
-     * wanaolingana (siyo tu ukurasa mmoja) - kwa ajili ya kuprint.
+     * Download the CR list (PDF) filtered the same way as index(), including
+     * every matching CR (not just one page) - for printing.
      */
     public function exportPdf(Request $request): Response|JsonResponse
     {
@@ -90,21 +91,21 @@ class UserAdminController extends Controller
 
             return $pdf->download('cr_list.pdf');
         } catch (\Throwable $e) {
-            Log::error('PDF export ya CR list imeshindikana: '.$e->getMessage(), ['exception' => $e]);
+            Log::error('CR list PDF export failed: '.$e->getMessage(), ['exception' => $e]);
 
             return response()->json([
-                'message' => 'Imeshindikana kutengeneza PDF. Jaribu tena au wasiliana na msimamizi wa mfumo.',
+                'message' => 'Failed to generate PDF. Try again or contact the system administrator.',
             ], 500);
         }
     }
 
     /**
-     * Admin anasajili CR mmoja mmoja. Ukitoa 'reg_no', email hutengenezwa
-     * kiotomatiki (kama kwenye usajili wa kawaida). Kama Reg No ina mwaka wa
-     * nyuma sana (chini ya 2022) au CR hana Reg No sahihi, Admin anaweza
-     * kuacha 'reg_no' wazi na kuweka 'email' yake mwenyewe (njia mbadala).
-     * Password hutengenezwa kiotomatiki na kutumwa kwenye email - haionekani
-     * kwenye response hii.
+     * Admin registers a single CR. If 'reg_no' is provided, the email is
+     * generated automatically (same as normal registration). If the Reg No
+     * has a year that is too old (before 2022) or the CR doesn't have a
+     * valid Reg No, the Admin can leave 'reg_no' blank and set 'email'
+     * directly instead. The password is generated automatically and sent
+     * to the email - it never appears in this response.
      */
     public function store(Request $request): JsonResponse
     {
@@ -122,14 +123,14 @@ class UserAdminController extends Controller
             'year_of_study' => ['nullable', 'integer', 'min:1', 'max:4'],
         ]);
 
-        // Admin wa kawaida hawezi kumsajili CR kwa campus tofauti na yake mwenyewe.
+        // A regular Admin cannot register a CR for a campus other than their own.
         if ($campusScope = $request->user()->campusScope()) {
             $data['campus'] = $campusScope;
         }
 
         if (empty($data['reg_no']) && empty($data['email'])) {
             throw ValidationException::withMessages([
-                'email' => 'Weka Reg No (kutengeneza email kiotomatiki) au email moja kwa moja.',
+                'email' => 'Provide a Reg No (to auto-generate the email) or an email directly.',
             ]);
         }
 
@@ -159,12 +160,12 @@ class UserAdminController extends Controller
 
         return response()->json([
             'user' => $user,
-            'message' => "CR ameongezwa. Password imetumwa kwenye email: {$user->email}",
+            'message' => "CR added. Password has been sent to email: {$user->email}",
         ], 201);
     }
 
     /**
-     * Pakua faili la mfano (template) la CSV kwa ajili ya kuingiza CR wengi kwa mkupuo.
+     * Download the sample (template) CSV file for bulk-importing CRs.
      */
     public function downloadTemplate(): StreamedResponse
     {
@@ -180,11 +181,12 @@ class UserAdminController extends Controller
     }
 
     /**
-     * Ingiza CR wengi kwa mkupuo kutoka faili la CSV lenye columns:
+     * Bulk-import CRs from a CSV file with columns:
      * name,reg_no,phone,faculty,department,program,level
      *
-     * Email hutengenezwa kiotomatiki kutoka name+reg_no kwa kila mstari.
-     * Reg No zenye mwaka chini ya 2022 zinarukwa (Admin awasiliane na CR husika).
+     * The email is generated automatically from name+reg_no for each row.
+     * Reg No entries with a year before 2022 are skipped (the Admin should
+     * contact that CR directly).
      */
     public function importCsv(Request $request): JsonResponse
     {
@@ -202,16 +204,16 @@ class UserAdminController extends Controller
 
         while (($row = fgetcsv($handle)) !== false) {
             $line = array_combine($header, $row);
-            $label = $line['reg_no'] ?? ($line['name'] ?? '(bila jina)');
+            $label = $line['reg_no'] ?? ($line['name'] ?? '(no name)');
 
             if (empty($line['reg_no']) || User::where('reg_no', $line['reg_no'])->exists()) {
-                $skipped[] = "{$label} (reg_no tupu au tayari ipo)";
+                $skipped[] = "{$label} (empty reg_no or already exists)";
 
                 continue;
             }
 
             if (! in_array($line['level'], self::VALID_LEVELS, true)) {
-                $skipped[] = "{$label} (level batili)";
+                $skipped[] = "{$label} (invalid level)";
 
                 continue;
             }
@@ -254,24 +256,24 @@ class UserAdminController extends Controller
         fclose($handle);
 
         return response()->json([
-            'message' => count($created).' CR wameongezwa (password zimetumwa kwa email), '.count($skipped).' wamerukwa.',
+            'message' => count($created).' CR(s) added (passwords sent by email), '.count($skipped).' skipped.',
             'created' => $created,
             'skipped' => $skipped,
         ]);
     }
 
     /**
-     * Admin anahariri CR: jina, namba ya simu, password, faculty, department,
-     * program, level, year_of_study. Jina likibadilika (na CR ana reg_no),
-     * email hutengenezwa upya kiotomatiki. Mabadiliko ya email/password
-     * hutumwa kwa CR husika kwenye email yake (mpya ikiwa imebadilika).
+     * Admin edits a CR: name, phone number, password, faculty, department,
+     * program, level, year_of_study. If the name changes (and the CR has a
+     * reg_no), the email is regenerated automatically. Email/password
+     * changes are sent to the CR at their email (the new one, if it changed).
      */
     public function update(Request $request, User $user): JsonResponse
     {
         abort_unless($user->role === 'cr', 404);
 
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $user->campus !== $campusScope, 403, 'Unaweza kusimamia CR wa campus yako pekee.');
+        abort_if($campusScope && $user->campus !== $campusScope, 403, 'You can only manage CRs from your own campus.');
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
@@ -287,7 +289,7 @@ class UserAdminController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        // Admin wa kawaida hawezi kumhamisha CR kwenda campus nyingine.
+        // A regular Admin cannot move a CR to another campus.
         if ($campusScope) {
             unset($data['campus']);
         }
@@ -322,7 +324,7 @@ class UserAdminController extends Controller
         $emailChanged = isset($data['email']) && $data['email'] !== $oldEmail;
 
         if ($emailChanged || $newPassword) {
-            $passwordForEmail = $newPassword ?? '(hujabadilisha - tumia password uliyokuwa nayo)';
+            $passwordForEmail = $newPassword ?? '(unchanged - keep using your existing password)';
             Mail::to($user->email)->queue(new CrCredentialsMail($user, $passwordForEmail));
         }
 
@@ -331,27 +333,27 @@ class UserAdminController extends Controller
         return response()->json([
             'user' => $user,
             'message' => $emailChanged
-                ? "Taarifa zimehifadhiwa. Email mpya: {$user->email} (arifa imetumwa)."
-                : 'Taarifa za CR zimehifadhiwa.',
+                ? "Details saved. New email: {$user->email} (notification sent)."
+                : 'CR details saved.',
         ]);
     }
 
     /**
-     * Admin anafuta CR. Taarifa zake binafsi (jina, email, simu, reg_no, faculty,
-     * department, program) zinafutwa/zinafichwa, LAKINI rekodi yake inabaki
-     * (bookings na activity logs zake) ili history ionekane kuwa "CR Aliyefutwa"
-     * aliwahi kufanya nini kwenye mfumo - hatufuti kabisa (hard delete) kwa
-     * kuwa hiyo ingevunja historia ya bookings/logs zilizounganishwa naye.
+     * Admin removes a CR. Their personal details (name, email, phone,
+     * reg_no, faculty, department, program) are erased/hidden, BUT their
+     * record is kept (their bookings and activity logs) so the history
+     * shows what a "Deleted CR" did in the system - we don't fully (hard)
+     * delete because that would break the booking/log history linked to them.
      */
     public function destroy(Request $request, User $user): JsonResponse
     {
         abort_unless($user->role === 'cr', 404);
 
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $user->campus !== $campusScope, 403, 'Unaweza kusimamia CR wa campus yako pekee.');
+        abort_if($campusScope && $user->campus !== $campusScope, 403, 'You can only manage CRs from your own campus.');
 
         $originalName = $user->name;
-        $placeholder = "CR Aliyefutwa #{$user->id}";
+        $placeholder = "Deleted CR #{$user->id}";
 
         $user->tokens()->delete();
 
@@ -371,23 +373,24 @@ class UserAdminController extends Controller
             'is_active' => false,
         ]);
 
-        // Soft delete (deleted_at) - CR haonekani tena kwenye orodha ya /admin/users,
-        // lakini rekodi yake inabaki DB (bookings/logs zake bado zinapatikana kwa
-        // historia, kupitia withTrashed() kwenye relations husika).
+        // Soft delete (deleted_at) - the CR no longer appears in the
+        // /admin/users list, but their record stays in the DB (their
+        // bookings/logs remain accessible for history, via withTrashed()
+        // on the relevant relations).
         $user->delete();
 
         ActivityLog::record(
             $request->user()->id,
             'user_deleted',
-            "Admin amemfuta CR \"{$originalName}\" (#{$user->id}). Historia ya bookings zake imehifadhiwa."
+            "Admin removed CR \"{$originalName}\" (#{$user->id}). Their booking history has been preserved."
         );
 
-        return response()->json(['message' => 'CR amefutwa. Historia yake ya bookings imehifadhiwa kwa rekodi.']);
+        return response()->json(['message' => 'CR removed. Their booking history has been preserved for records.']);
     }
 
     /**
-     * Kama email iliyotengenezwa tayari ipo, ongeza namba mwishoni mwa
-     * local-part mpaka ipatikane email isiyotumika.
+     * If the generated email already exists, append a number to the end of
+     * the local-part until an unused email is found.
      */
     private function resolveUniqueEmail(string $email, ?int $ignoreUserId = null): string
     {
@@ -399,9 +402,10 @@ class UserAdminController extends Controller
 
         [$local, $domain] = explode('@', $email, 2);
 
-        // Tumia "." kabla ya namba ya kutofautisha (mfano "dickson.thomas25.2@...")
-        // badala ya kuunganisha moja kwa moja (ambayo ingezalisha "dickson.thomas252@..."
-        // - inayoonekana kama mwaka tofauti kabisa, si kama namba ya kutofautisha).
+        // Use "." before the disambiguating number (e.g. "dickson.thomas25.2@...")
+        // instead of concatenating it directly (which would produce
+        // "dickson.thomas252@..." - which looks like an entirely different
+        // year, not a disambiguating number).
         for ($i = 2; $i < 100; $i++) {
             $candidate = "{$local}.{$i}@{$domain}";
             if (! $exists($candidate)) {
@@ -409,6 +413,6 @@ class UserAdminController extends Controller
             }
         }
 
-        throw ValidationException::withMessages(['reg_no' => 'Imeshindikana kutengeneza email ya kipekee. Wasiliana na Admin.']);
+        throw ValidationException::withMessages(['reg_no' => 'Failed to generate a unique email. Contact the Admin.']);
     }
 }

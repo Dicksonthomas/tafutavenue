@@ -36,7 +36,8 @@ class TimetableSlot extends Model
     }
 
     /**
-     * Chuja lecture/timetable slots zinazogongana na muda uliopewa, kwa venue na siku ya wiki.
+     * Filter lecture/timetable slots that clash with the given time range,
+     * for a venue and day of week.
      */
     public function scopeOverlapping(Builder $query, int $venueId, string $dayOfWeek, string $start, string $end): Builder
     {

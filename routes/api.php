@@ -17,7 +17,7 @@ use App\Http\Controllers\Api\VenueController;
 use Illuminate\Support\Facades\Route;
 
 // ---------------------------------------------------------------------
-// PUBLIC (hakuna login inayohitajika)
+// PUBLIC (no login required)
 // ---------------------------------------------------------------------
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -30,7 +30,7 @@ Route::get('/reference/programs', [ReferenceDataController::class, 'programs']);
 Route::get('/reference/level-years', [ReferenceDataController::class, 'levelYears']);
 
 // ---------------------------------------------------------------------
-// CR / MTUMIAJI ALIYE-LOGIN (Sanctum bearer token)
+// CR / LOGGED-IN USER (Sanctum bearer token)
 // ---------------------------------------------------------------------
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -53,7 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel']);
 
     // -------------------------------------------------------------
-    // ADMIN PEKEE
+    // ADMIN ONLY
     // -------------------------------------------------------------
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::post('/semesters', [SemesterController::class, 'store']);
@@ -64,10 +64,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/venues', [VenueAdminController::class, 'store']);
         Route::post('/venues/import-timetable', [VenueAdminController::class, 'importTimetable']);
         Route::get('/venues/timetable-status', [VenueAdminController::class, 'timetableStatus']);
-        // Route hii ("/venues/timetable") LAZIMA iwe kabla ya "/venues/{venue}"
-        // hapa chini - vinginevyo Laravel inajaribu ku-treat "timetable" kama
-        // {venue} ID (routing inalinganisha kwa mpangilio wa juu chini) na
-        // inatoa 404 kabla ya kufika kwenye clearTimetable().
+        // This route ("/venues/timetable") MUST come before "/venues/{venue}"
+        // below - otherwise Laravel tries to treat "timetable" as the
+        // {venue} ID (routing matches top-to-bottom) and returns a 404
+        // before ever reaching clearTimetable().
         Route::delete('/venues/timetable', [VenueAdminController::class, 'clearTimetable']);
         Route::put('/venues/{venue}', [VenueAdminController::class, 'update']);
         Route::delete('/venues/{venue}', [VenueAdminController::class, 'destroy']);

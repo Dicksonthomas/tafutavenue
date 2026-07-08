@@ -10,8 +10,8 @@ use Illuminate\Http\Request;
 class TimetableSlotController extends Controller
 {
     /**
-     * CR anaandika jina la Lecturer na kupata ratiba yake yote ya wiki,
-     * ili aweze kujua Lecturer wake anafundisha wapi na lini bila kuhangaika.
+     * The CR types a Lecturer's name and gets their full weekly schedule,
+     * so they can know where and when that Lecturer teaches without hassle.
      */
     public function byLecturer(Request $request): JsonResponse
     {

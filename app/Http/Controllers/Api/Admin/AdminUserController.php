@@ -15,9 +15,9 @@ class AdminUserController extends Controller
     private const CAMPUSES = ['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'];
 
     /**
-     * Orodha ya Admin wote. Super Admin "Mkuu" (is_main_super_admin) haonekani
-     * kwa mtu yeyote isipokuwa yeye mwenyewe - Admin wa kawaida na Super Admin
-     * waliopandishwa (promoted) wote hawamuoni.
+     * List of all Admins. The Main Super Admin (is_main_super_admin) is not
+     * visible to anyone except themselves - both regular Admins and promoted
+     * Super Admins cannot see them.
      */
     public function index(Request $request): JsonResponse
     {
@@ -30,14 +30,14 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Ongeza Admin mpya. Super Admin PEKEE (mkuu au aliyepandishwa) ndiye
-     * anayeweza kuongeza Admin. "is_super_admin" wakati wa kuongeza inaruhusiwa
-     * TU kama muumbaji ni Super Admin Mkuu - vinginevyo inapuuzwa (Admin mpya
-     * anabaki wa kawaida). Campus inahitajika kwa Admin wa kawaida (siyo super).
+     * Add a new Admin. Only a Super Admin (main or promoted) can add an
+     * Admin. "is_super_admin" during creation is only allowed if the creator
+     * is the Main Super Admin - otherwise it is ignored (the new Admin stays
+     * a regular admin). Campus is required for a regular Admin (not super).
      */
     public function store(Request $request): JsonResponse
     {
-        abort_unless($request->user()->isSuperAdmin(), 403, 'Super Admin pekee anaweza kuongeza Admin.');
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Only a Super Admin can add an Admin.');
 
         $makeSuperAdmin = $request->boolean('is_super_admin') && $request->user()->isMainSuperAdmin();
 
@@ -62,25 +62,24 @@ class AdminUserController extends Controller
 
         return response()->json([
             'user' => $admin,
-            'message' => 'Admin mpya ameongezwa.',
+            'message' => 'New admin added.',
         ], 201);
     }
 
     /**
-     * Hariri taarifa za Admin - Super Admin PEKEE (mkuu au aliyepandishwa)
-     * ndiye anaweza kuhariri. Hakuna anayeweza kuhariri Super Admin Mkuu
-     * isipokuwa yeye mwenyewe. Kubadilisha hadhi ya "is_super_admin" ni kwa
-     * Super Admin Mkuu PEKEE - Super Admin aliyepandishwa hawezi kumpandisha/
-     * kumshusha Admin mwingine.
+     * Edit an Admin's details - only a Super Admin (main or promoted) can
+     * edit. No one can edit the Main Super Admin except themselves. Changing
+     * "is_super_admin" status is for the Main Super Admin ONLY - a promoted
+     * Super Admin cannot promote/demote another Admin.
      */
     public function update(Request $request, User $admin): JsonResponse
     {
         abort_unless($admin->role === 'admin', 404);
-        abort_unless($request->user()->isSuperAdmin(), 403, 'Huwezi kuhariri taarifa za Admin.');
+        abort_unless($request->user()->isSuperAdmin(), 403, 'You cannot edit Admin details.');
         abort_if(
             $admin->isMainSuperAdmin() && $admin->id !== $request->user()->id,
             403,
-            'Huwezi kuhariri Super Admin Mkuu.'
+            'You cannot edit the Main Super Admin.'
         );
 
         $data = $request->validate([
@@ -116,20 +115,20 @@ class AdminUserController extends Controller
 
         return response()->json([
             'user' => $admin,
-            'message' => 'Taarifa za Admin zimehifadhiwa.',
+            'message' => "Admin's details have been saved.",
         ]);
     }
 
     /**
-     * Futa Admin - Super Admin Mkuu hawezi kufutwa kabisa na mtu yeyote.
-     * Super Admin waliopandishwa (promoted) wanaweza kufutwa na Super Admin
-     * yeyote (mkuu au mwingine aliyepandishwa).
+     * Remove an Admin - the Main Super Admin can never be removed by anyone.
+     * Promoted Super Admins can be removed by any Super Admin (main or
+     * another promoted one).
      */
     public function destroy(Request $request, User $admin): JsonResponse
     {
         abort_unless($admin->role === 'admin', 404);
-        abort_unless($request->user()->isSuperAdmin(), 403, 'Super Admin pekee anaweza kumfuta Admin.');
-        abort_if($admin->isMainSuperAdmin(), 403, 'Huwezi kumfuta Super Admin Mkuu.');
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Only a Super Admin can remove an Admin.');
+        abort_if($admin->isMainSuperAdmin(), 403, 'You cannot remove the Main Super Admin.');
 
         $admin->tokens()->delete();
         $adminName = $admin->name;
@@ -137,6 +136,6 @@ class AdminUserController extends Controller
 
         ActivityLog::record($request->user()->id, 'admin_removed', "{$request->user()->name} removed admin {$adminName}.");
 
-        return response()->json(['message' => 'Admin amefutwa.']);
+        return response()->json(['message' => 'Admin removed.']);
     }
 }

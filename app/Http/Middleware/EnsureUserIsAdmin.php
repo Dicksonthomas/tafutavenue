@@ -15,7 +15,7 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user()?->isAdmin(), 403, 'Eneo hili ni la Admin pekee.');
+        abort_unless($request->user()?->isAdmin(), 403, 'This area is for Admins only.');
 
         return $next($request);
     }

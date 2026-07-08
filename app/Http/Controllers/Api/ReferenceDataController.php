@@ -32,7 +32,7 @@ class ReferenceDataController extends Controller
         'IDS' => ['Development Studies', 'Rural Development', 'Community Development'],
     ];
 
-    /** Level -> idadi ya miaka ya masomo. */
+    /** Level -> number of years of study. */
     private const YEARS_BY_LEVEL = [
         'Certificate' => 1,
         'Diploma' => 2,
@@ -62,8 +62,8 @@ class ReferenceDataController extends Controller
     }
 
     /**
-     * Programs halisi zilizovutwa kutoka kwenye timetable ya chuo (course scheduling data),
-     * kwa ajili ya dropdown yenye live search kwenye usajili.
+     * Real programs pulled from the university timetable (course scheduling
+     * data), for the live-search dropdown during registration.
      */
     public function programs(Request $request): JsonResponse
     {
@@ -74,10 +74,10 @@ class ReferenceDataController extends Controller
             ->distinct()
             ->pluck('program')
             ->flatMap(function ($p) {
-                // Kwenye timetable, program nyingi zinazoshiriki somo moja
-                // huhifadhiwa zikiwa zimeunganishwa kwa nafasi (siyo comma),
-                // mfano "BAF-BS 1A BAF-BS 1B BSc.ICTB 1" - kila token ni
-                // "KODI MWAKA" (mfano "BSc.ICTB 1" au "BAF-BS 1A").
+                // In the timetable, multiple programs sharing one course are
+                // stored joined by spaces (not commas), e.g.
+                // "BAF-BS 1A BAF-BS 1B BSc.ICTB 1" - each token is
+                // "CODE YEAR" (e.g. "BSc.ICTB 1" or "BAF-BS 1A").
                 preg_match_all('/[A-Za-z][A-Za-z.\-]*\s+\d+[A-Za-z]?/', $p, $matches);
 
                 return $matches[0] ?: [trim($p)];

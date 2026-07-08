@@ -62,8 +62,9 @@ class Booking extends Model
     }
 
     /**
-     * Chuja bookings zinazogongana na muda (start_time - end_time) uliopewa,
-     * kwa venue na tarehe husika. Bookings zilizokataliwa/kufutwa haziwazuii wengine.
+     * Filter bookings that clash with the given time range (start_time -
+     * end_time) for a venue and date. Rejected/cancelled bookings don't
+     * block others.
      */
     public function scopeOverlapping(Builder $query, int $venueId, string $date, string $start, string $end): Builder
     {

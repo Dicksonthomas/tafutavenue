@@ -12,10 +12,11 @@ use Laravel\Sanctum\PersonalAccessToken;
 class SettingsController extends Controller
 {
     /**
-     * Mipangilio ya sasa (rangi kuu + logo). Endpoint hii ni ya wazi (public)
-     * kwa sababu ukurasa wa login/register nao unahitaji kuonyesha logo/rangi
-     * kabla ya mtumiaji kuingia. Kama mtumiaji ame-login (token) na ana rangi
-     * yake binafsi (preferred_color), hiyo inatumika badala ya default.
+     * Current settings (primary color + logo). This endpoint is public
+     * because the login/register pages also need to show the logo/color
+     * before the user logs in. If the user is logged in (token) and has
+     * their own personal color (preferred_color), that is used instead of
+     * the default.
      */
     public function show(Request $request): JsonResponse
     {
@@ -46,10 +47,10 @@ class SettingsController extends Controller
     }
 
     /**
-     * Admin anabadilisha rangi kuu (default) ya mfumo na/au logo ya App.
-     * Logo si ya lazima - Admin anaweza kubadilisha rangi tu bila kugusa logo.
-     * Jina la App, namba ya msaada (support phone), maneno/link ya footer, na
-     * rangi ya background ya login page ni Super Admin PEKEE anayeweza kuvibadilisha.
+     * Admin changes the system's default primary color and/or the App logo.
+     * The logo is optional - an Admin can change just the color without
+     * touching the logo. App name, support phone, footer text/link, and the
+     * login page background color can ONLY be changed by a Super Admin.
      */
     public function update(Request $request): JsonResponse
     {
@@ -74,14 +75,14 @@ class SettingsController extends Controller
                 ->first(fn ($day) => ! in_array($day, $days, true));
 
             if ($invalidDay) {
-                abort(422, "Siku isiyotambulika: {$invalidDay}.");
+                abort(422, "Unrecognized day: {$invalidDay}.");
             }
         }
 
         $superAdminOnlyFields = ['app_name', 'support_phone', 'footer_text', 'footer_link', 'login_background_color'];
 
         if ($request->anyFilled($superAdminOnlyFields) && ! $request->user()->isSuperAdmin()) {
-            abort(403, 'Super Admin pekee anaweza kubadilisha mipangilio hii.');
+            abort(403, 'Only a Super Admin can change these settings.');
         }
 
         $settings = AppSetting::current();
@@ -111,7 +112,7 @@ class SettingsController extends Controller
         ActivityLog::record($request->user()->id, 'settings_updated', "{$request->user()->name} updated the system settings.");
 
         return response()->json([
-            'message' => 'Mipangilio imehifadhiwa.',
+            'message' => 'Settings saved.',
             'primary_color' => $settings->primary_color,
             'logo_url' => $settings->logo_path,
             'app_name' => $settings->app_name,
