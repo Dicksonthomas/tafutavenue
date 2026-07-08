@@ -5,7 +5,7 @@
 </head>
 <body style="font-family: Arial, sans-serif; background:#f1f5f9; padding:24px;">
     <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
-        <div style="background:#002f3a;padding:20px 24px;">
+        <div style="background:#002d62;padding:20px 24px;">
             <h1 style="color:#ffffff;font-size:18px;margin:0;">University Venue Booking System</h1>
         </div>
         <div style="padding:24px;color:#1e293b;">
