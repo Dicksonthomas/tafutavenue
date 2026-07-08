@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Mail\CrCredentialsMail;
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\CrEmailGenerator;
 use Illuminate\Http\JsonResponse;
@@ -81,7 +82,7 @@ class AuthController extends Controller
         [$local, $domain] = explode('@', $email, 2);
 
         for ($i = 2; $i < 100; $i++) {
-            $candidate = "{$local}{$i}@{$domain}";
+            $candidate = "{$local}.{$i}@{$domain}";
             if (! User::where('email', $candidate)->exists()) {
                 return $candidate;
             }
@@ -98,6 +99,14 @@ class AuthController extends Controller
         ]);
 
         if (! Auth::attempt($credentials)) {
+            $attemptedUser = User::where('email', $credentials['email'])->first();
+
+            ActivityLog::record(
+                $attemptedUser?->id,
+                'login_failed',
+                "Failed login attempt for \"{$credentials['email']}\" (wrong password or unknown account)."
+            );
+
             return response()->json([
                 'message' => 'Invalid username or password. Note that both fields may be case-sensitive.',
             ], 401);
@@ -107,12 +116,16 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if (! $user->is_active) {
+            ActivityLog::record($user->id, 'login_blocked', "{$user->name} tried to log in but their account is suspended.");
+
             return response()->json([
                 'message' => 'Akaunti yako imesimamishwa. Wasiliana na Admin.',
             ], 403);
         }
 
         $token = $user->createToken('mobile-app')->plainTextToken;
+
+        ActivityLog::record($user->id, 'login_success', "{$user->name} logged in.");
 
         return response()->json([
             'user' => $user,

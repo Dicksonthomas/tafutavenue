@@ -77,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/summary', [ReportController::class, 'summary']);
         Route::get('/reports/venues/{venue}', [ReportController::class, 'venueUsage']);
         Route::get('/reports/bookings/export', [ReportController::class, 'exportBookings']);
+        Route::get('/reports/bookings/export-pdf', [ReportController::class, 'exportBookingsPdf']);
 
         Route::get('/users', [UserAdminController::class, 'index']);
         Route::post('/users', [UserAdminController::class, 'store']);

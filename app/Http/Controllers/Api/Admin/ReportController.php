@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\User;
 use App\Models\Venue;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -100,18 +103,42 @@ class ReportController extends Controller
     }
 
     /**
+     * Query ya bookings iliyochujwa (status/date/venue), inatumika na exports zote mbili.
+     */
+    private function filteredBookingsQuery(Request $request): Builder
+    {
+        return Booking::with(['user:id,name,email,program', 'venue:id,name,campus'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
+            ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))
+            ->orderByDesc('booking_date')
+            ->orderByDesc('start_time');
+    }
+
+    /**
+     * Pakua ripoti ya bookings zote (PDF), ikichujwa na status/date/venue kama
+     * inavyofanya BookingAdminController::index.
+     */
+    public function exportBookingsPdf(Request $request): Response
+    {
+        $bookings = $this->filteredBookingsQuery($request)->get();
+
+        $pdf = Pdf::loadView('reports.bookings-pdf', [
+            'bookings' => $bookings,
+            'status' => $request->string('status')->toString(),
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('bookings_report.pdf');
+    }
+
+    /**
      * Pakua ripoti ya bookings zote (CSV), ikichujwa na status/date/venue kama
      * inavyofanya BookingAdminController::index.
      */
     public function exportBookings(Request $request): StreamedResponse
     {
-        $bookings = Booking::with(['user:id,name,email,program', 'venue:id,name,campus'])
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
-            ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
-            ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))
-            ->orderByDesc('booking_date')
-            ->orderByDesc('start_time')
-            ->get();
+        $bookings = $this->filteredBookingsQuery($request)->get();
 
         $filename = 'bookings_report.csv';
 
