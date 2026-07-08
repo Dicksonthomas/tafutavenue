@@ -9,9 +9,9 @@
         .header p { margin: 4px 0 0; font-size: 13px; color: #cfdadd; }
         .filters { margin-bottom: 12px; font-size: 12px; color: #64748b; }
         .filters span { display: inline-block; background: #f1f5f9; border-radius: 8px; padding: 3px 9px; margin-right: 6px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f1f5f9; text-align: left; padding: 7px 8px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-        td { padding: 7px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { background: #f1f5f9; text-align: left; padding: 7px 8px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; word-wrap: break-word; }
+        td { padding: 7px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9; word-wrap: break-word; overflow-wrap: break-word; }
         tr:nth-child(even) { background: #fafafa; }
         .footer { margin-top: 16px; font-size: 12px; color: #94a3b8; }
     </style>
@@ -37,19 +37,19 @@
     <table>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Reg No</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Campus</th>
-                <th>Faculty</th>
-                <th>Department</th>
-                <th>Program</th>
-                <th>Level</th>
-                <th>Year</th>
-                <th>Sex</th>
-                <th>Status</th>
+                <th style="width: 3%;">#</th>
+                <th style="width: 12%;">Name</th>
+                <th style="width: 8%;">Reg No</th>
+                <th style="width: 17%;">Email</th>
+                <th style="width: 8%;">Phone</th>
+                <th style="width: 7%;">Campus</th>
+                <th style="width: 6%;">Faculty</th>
+                <th style="width: 9%;">Department</th>
+                <th style="width: 11%;">Program</th>
+                <th style="width: 6%;">Level</th>
+                <th style="width: 3%;">Year</th>
+                <th style="width: 4%;">Sex</th>
+                <th style="width: 6%;">Status</th>
             </tr>
         </thead>
         <tbody>

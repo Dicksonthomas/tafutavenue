@@ -129,6 +129,7 @@ class AdminUserController extends Controller
         abort_unless($admin->role === 'admin', 404);
         abort_unless($request->user()->isSuperAdmin(), 403, 'Only a Super Admin can remove an Admin.');
         abort_if($admin->isMainSuperAdmin(), 403, 'You cannot remove the Main Super Admin.');
+        abort_if($admin->id === $request->user()->id, 403, 'You cannot remove your own account.');
 
         $admin->tokens()->delete();
         $adminName = $admin->name;
