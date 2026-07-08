@@ -62,11 +62,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/venues', [VenueAdminController::class, 'index']);
         Route::post('/venues', [VenueAdminController::class, 'store']);
-        Route::put('/venues/{venue}', [VenueAdminController::class, 'update']);
-        Route::delete('/venues/{venue}', [VenueAdminController::class, 'destroy']);
         Route::post('/venues/import-timetable', [VenueAdminController::class, 'importTimetable']);
         Route::get('/venues/timetable-status', [VenueAdminController::class, 'timetableStatus']);
+        // Route hii ("/venues/timetable") LAZIMA iwe kabla ya "/venues/{venue}"
+        // hapa chini - vinginevyo Laravel inajaribu ku-treat "timetable" kama
+        // {venue} ID (routing inalinganisha kwa mpangilio wa juu chini) na
+        // inatoa 404 kabla ya kufika kwenye clearTimetable().
         Route::delete('/venues/timetable', [VenueAdminController::class, 'clearTimetable']);
+        Route::put('/venues/{venue}', [VenueAdminController::class, 'update']);
+        Route::delete('/venues/{venue}', [VenueAdminController::class, 'destroy']);
 
         Route::post('/timetable/import-from-link', [TimetableImportController::class, 'importFromLink']);
 

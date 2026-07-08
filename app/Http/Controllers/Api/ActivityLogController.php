@@ -25,12 +25,16 @@ class ActivityLogController extends Controller
 
         $query = ActivityLog::with(['user:id,name,role,is_super_admin', 'booking:id,venue_id,booking_date,start_time,end_time'])
             ->where(function ($q) use ($viewer) {
-                $q->whereHas('user', function ($u) {
-                    $u->where('role', '!=', 'admin')
-                        ->orWhere(function ($u2) {
-                            $u2->where('role', 'admin')->where('is_super_admin', false);
-                        });
-                });
+                // Logs zisizo na actor anayejulikana (mfano jaribio la kuingia
+                // kwa email isiyokuwepo kabisa - user_id ni null) daima zinaonekana
+                // kwa Admin - hazina "mmiliki" wa kuzificha.
+                $q->whereNull('user_id')
+                    ->orWhereHas('user', function ($u) {
+                        $u->where('role', '!=', 'admin')
+                            ->orWhere(function ($u2) {
+                                $u2->where('role', 'admin')->where('is_super_admin', false);
+                            });
+                    });
 
                 if ($viewer->isSuperAdmin()) {
                     $q->orWhere('user_id', $viewer->id);
