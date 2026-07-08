@@ -108,7 +108,7 @@ class AuthController extends Controller
             );
 
             return response()->json([
-                'message' => 'Invalid username or password. Note that both fields may be case-sensitive.',
+                'message' => 'Incorrect username or password. Please check and try again.',
             ], 401);
         }
 
