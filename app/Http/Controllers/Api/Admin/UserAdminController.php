@@ -267,10 +267,11 @@ class UserAdminController extends Controller
     }
 
     /**
-     * Admin edits a CR: name, phone number, password, faculty, department,
-     * program, level, year_of_study. If the name changes (and the CR has a
-     * reg_no), the email is regenerated automatically. Email/password
-     * changes are sent to the CR at their email (the new one, if it changed).
+     * Admin edits a CR: name, reg_no, phone number, password, faculty,
+     * department, program, level, year_of_study. If the name or reg_no
+     * changes (and a reg_no is present either way), the email is
+     * regenerated automatically. Email/password changes are sent to the CR
+     * at their email (the new one, if it changed).
      */
     public function update(Request $request, User $user): JsonResponse
     {
@@ -281,6 +282,7 @@ class UserAdminController extends Controller
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'reg_no' => ['sometimes', 'nullable', 'string', 'max:50', Rule::unique('users', 'reg_no')->ignore($user->id)->whereNull('deleted_at')],
             'phone' => ['sometimes', 'string', 'max:20'],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'campus' => ['sometimes', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
@@ -309,17 +311,20 @@ class UserAdminController extends Controller
         }
 
         $nameChanging = isset($data['name']) && $data['name'] !== $user->name;
+        $regNoChanging = array_key_exists('reg_no', $data) && $data['reg_no'] !== $user->reg_no;
+        $effectiveName = $data['name'] ?? $user->name;
+        $effectiveRegNo = array_key_exists('reg_no', $data) ? $data['reg_no'] : $user->reg_no;
 
-        if ($nameChanging && $user->reg_no) {
+        if (($nameChanging || $regNoChanging) && $effectiveRegNo) {
             try {
-                $generated = CrEmailGenerator::generate($data['name'], $user->reg_no);
+                $generated = CrEmailGenerator::generate($effectiveName, $effectiveRegNo);
                 $candidate = $generated['email'];
 
                 if ($candidate !== $user->email) {
                     $data['email'] = $this->resolveUniqueEmail($candidate, ignoreUserId: $user->id);
                 }
             } catch (InvalidArgumentException $e) {
-                throw ValidationException::withMessages(['name' => $e->getMessage()]);
+                throw ValidationException::withMessages(['reg_no' => $e->getMessage()]);
             }
         }
 
