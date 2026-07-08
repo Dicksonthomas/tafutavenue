@@ -3,20 +3,20 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 11px; }
+        body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 14px; }
         .header { background: #002f3a; color: #ffffff; padding: 14px 18px; margin-bottom: 16px; }
-        .header h1 { margin: 0; font-size: 16px; }
-        .header p { margin: 4px 0 0; font-size: 10px; color: #cfdadd; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .header p { margin: 4px 0 0; font-size: 13px; color: #cfdadd; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f1f5f9; text-align: left; padding: 6px 8px; font-size: 9px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f1f5f9; text-align: left; padding: 8px; font-size: 12px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 8px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
         tr:nth-child(even) { background: #fafafa; }
-        .status { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold; }
+        .status { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
         .status-approved { background: #d1fae5; color: #065f46; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-rejected { background: #fee2e2; color: #991b1b; }
         .status-cancelled { background: #f1f5f9; color: #475569; }
-        .footer { margin-top: 16px; font-size: 9px; color: #94a3b8; }
+        .footer { margin-top: 16px; font-size: 12px; color: #94a3b8; }
     </style>
 </head>
 <body>

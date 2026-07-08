@@ -61,6 +61,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
+            'is_main_super_admin' => 'boolean',
         ];
     }
 
@@ -72,6 +73,25 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === 'admin' && $this->is_super_admin;
+    }
+
+    /**
+     * Super Admin "Mkuu" - wa pekee asiyeweza kufutwa/kubadilishwa na
+     * Super Admin wengine walioongezwa (promoted). Tofauti na isSuperAdmin()
+     * ambayo ni kweli kwa Super Admin wote (mkuu na waliopandishwa).
+     */
+    public function isMainSuperAdmin(): bool
+    {
+        return $this->role === 'admin' && $this->is_super_admin && $this->is_main_super_admin;
+    }
+
+    /**
+     * Campus ambayo Admin huyu anapaswa kuiona TU - null kwa Super Admin
+     * (wanaona campuses zote).
+     */
+    public function campusScope(): ?string
+    {
+        return $this->isSuperAdmin() ? null : $this->campus;
     }
 
     /** @return HasMany<Booking> */

@@ -3,17 +3,17 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 10px; }
+        body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 13px; }
         .header { background: #002f3a; color: #ffffff; padding: 14px 18px; margin-bottom: 12px; }
-        .header h1 { margin: 0; font-size: 16px; }
-        .header p { margin: 4px 0 0; font-size: 10px; color: #cfdadd; }
-        .filters { margin-bottom: 12px; font-size: 9px; color: #64748b; }
-        .filters span { display: inline-block; background: #f1f5f9; border-radius: 8px; padding: 2px 8px; margin-right: 6px; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .header p { margin: 4px 0 0; font-size: 13px; color: #cfdadd; }
+        .filters { margin-bottom: 12px; font-size: 12px; color: #64748b; }
+        .filters span { display: inline-block; background: #f1f5f9; border-radius: 8px; padding: 3px 9px; margin-right: 6px; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f1f5f9; text-align: left; padding: 6px 8px; font-size: 8px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-        td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f1f5f9; text-align: left; padding: 7px 8px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 7px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
         tr:nth-child(even) { background: #fafafa; }
-        .footer { margin-top: 16px; font-size: 9px; color: #94a3b8; }
+        .footer { margin-top: 16px; font-size: 12px; color: #94a3b8; }
     </style>
 </head>
 <body>

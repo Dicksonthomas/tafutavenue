@@ -29,6 +29,9 @@ class TimetableImportController extends Controller
             'mode' => ['nullable', 'in:add,replace'],
         ]);
 
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $campusScope !== $data['campus'], 403, 'Unaweza kufanya kazi na campus yako pekee.');
+
         $semester = Semester::findOrFail($data['semester_id']);
 
         if (($data['mode'] ?? 'add') === 'replace') {

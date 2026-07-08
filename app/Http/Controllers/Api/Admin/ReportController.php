@@ -42,8 +42,10 @@ class ReportController extends Controller
     public function summary(Request $request): JsonResponse
     {
         [$from, $to] = $this->rangeToDates($request->string('range', 'all'));
+        $campusScope = $request->user()->campusScope();
 
         $query = Booking::query()
+            ->when($campusScope, fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $campusScope)))
             ->when($request->filled('semester_id'), fn ($q) => $q->where('semester_id', $request->integer('semester_id')))
             ->when($from && $to, fn ($q) => $q->whereBetween('booking_date', [$from->toDateString(), $to->toDateString()]));
 
@@ -66,9 +68,13 @@ class ReportController extends Controller
             ->groupBy('purpose')
             ->pluck('total', 'purpose');
 
-        $crQuery = User::where('role', 'cr');
+        $crQuery = User::where('role', 'cr')
+            ->when($campusScope, fn ($q) => $q->where('campus', $campusScope));
 
-        $venuesByCampus = Venue::select('campus', DB::raw('count(*) as total'))
+        $venueQuery = Venue::query()->when($campusScope, fn ($q) => $q->where('campus', $campusScope));
+
+        $venuesByCampus = (clone $venueQuery)
+            ->select('campus', DB::raw('count(*) as total'))
             ->groupBy('campus')
             ->pluck('total', 'campus');
 
@@ -82,7 +88,7 @@ class ReportController extends Controller
             'by_status' => $byStatus,
             'by_purpose' => $byPurpose,
             'most_booked_venues' => $mostBookedVenues,
-            'total_venues' => Venue::count(),
+            'total_venues' => (clone $venueQuery)->count(),
             'venues_by_campus' => $venuesByCampus,
             'total_crs' => (clone $crQuery)->count(),
             'crs_by_campus' => $crsByCampus,
@@ -96,6 +102,9 @@ class ReportController extends Controller
      */
     public function venueUsage(Request $request, Venue $venue): JsonResponse
     {
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $venue->campus !== $campusScope, 403, 'Unaweza kuona ripoti za campus yako pekee.');
+
         $bookings = $venue->bookings()
             ->with('user:id,name,program')
             ->when($request->filled('semester_id'), fn ($q) => $q->where('semester_id', $request->integer('semester_id')))
@@ -114,7 +123,10 @@ class ReportController extends Controller
      */
     private function filteredBookingsQuery(Request $request): Builder
     {
+        $campusScope = $request->user()->campusScope();
+
         return Booking::with(['user:id,name,email,program', 'venue:id,name,campus'])
+            ->when($campusScope, fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $campusScope)))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
             ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))

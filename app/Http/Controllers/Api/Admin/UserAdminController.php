@@ -31,6 +31,8 @@ class UserAdminController extends Controller
      */
     private function filteredUsersQuery(Request $request): Builder
     {
+        $campusScope = $request->user()->campusScope();
+
         return User::query()
             ->where('role', 'cr')
             ->when($request->filled('q'), function ($query) use ($request) {
@@ -42,7 +44,10 @@ class UserAdminController extends Controller
                         ->orWhere('program', 'like', "%{$q}%");
                 });
             })
-            ->when($request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
+            // Admin wa kawaida amefungiwa campus yake pekee (filter ya 'campus'
+            // kwenye request inapuuzwa kwake); Super Admin anachuja kwa hiari.
+            ->when($campusScope, fn ($query) => $query->where('campus', $campusScope))
+            ->when(! $campusScope && $request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
             ->when($request->filled('faculty'), fn ($query) => $query->where('faculty', $request->string('faculty')))
             ->when($request->filled('department'), fn ($query) => $query->where('department', $request->string('department')))
             ->when($request->filled('program'), fn ($query) => $query->where('program', $request->string('program')))
@@ -117,6 +122,11 @@ class UserAdminController extends Controller
             'year_of_study' => ['nullable', 'integer', 'min:1', 'max:4'],
         ]);
 
+        // Admin wa kawaida hawezi kumsajili CR kwa campus tofauti na yake mwenyewe.
+        if ($campusScope = $request->user()->campusScope()) {
+            $data['campus'] = $campusScope;
+        }
+
         if (empty($data['reg_no']) && empty($data['email'])) {
             throw ValidationException::withMessages([
                 'email' => 'Weka Reg No (kutengeneza email kiotomatiki) au email moja kwa moja.',
@@ -182,6 +192,8 @@ class UserAdminController extends Controller
             'file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
+        $campusScope = $request->user()->campusScope();
+
         $handle = fopen($request->file('file')->getRealPath(), 'r');
         $header = fgetcsv($handle);
 
@@ -220,7 +232,7 @@ class UserAdminController extends Controller
                 'reg_no' => $line['reg_no'],
                 'email' => $email,
                 'phone' => $line['phone'] ?? null,
-                'campus' => $line['campus'] ?? 'morogoro_main',
+                'campus' => $campusScope ?? ($line['campus'] ?? 'morogoro_main'),
                 'sex' => in_array($line['sex'] ?? null, ['male', 'female'], true) ? $line['sex'] : null,
                 'faculty' => $line['faculty'] ?? null,
                 'department' => $line['department'] ?? null,
@@ -258,6 +270,9 @@ class UserAdminController extends Controller
     {
         abort_unless($user->role === 'cr', 404);
 
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $user->campus !== $campusScope, 403, 'Unaweza kusimamia CR wa campus yako pekee.');
+
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'phone' => ['sometimes', 'string', 'max:20'],
@@ -271,6 +286,11 @@ class UserAdminController extends Controller
             'year_of_study' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:4'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        // Admin wa kawaida hawezi kumhamisha CR kwenda campus nyingine.
+        if ($campusScope) {
+            unset($data['campus']);
+        }
 
         $oldEmail = $user->email;
         $newPassword = null;
@@ -326,6 +346,9 @@ class UserAdminController extends Controller
     public function destroy(Request $request, User $user): JsonResponse
     {
         abort_unless($user->role === 'cr', 404);
+
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $user->campus !== $campusScope, 403, 'Unaweza kusimamia CR wa campus yako pekee.');
 
         $originalName = $user->name;
         $placeholder = "CR Aliyefutwa #{$user->id}";

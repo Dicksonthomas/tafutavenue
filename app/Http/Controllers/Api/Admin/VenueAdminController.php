@@ -13,8 +13,20 @@ use Illuminate\Validation\Rule;
 
 class VenueAdminController extends Controller
 {
+    /**
+     * Admin wa kawaida (siyo Super Admin) anaweza tu kufanya kazi na campus
+     * yake mwenyewe - 403 akijaribu campus nyingine.
+     */
+    private function assertCampusAllowed(Request $request, string $campus): void
+    {
+        $scope = $request->user()->campusScope();
+        abort_if($scope && $scope !== $campus, 403, 'Unaweza kufanya kazi na campus yako pekee.');
+    }
+
     public function index(Request $request): JsonResponse
     {
+        $campusScope = $request->user()->campusScope();
+
         $venues = Venue::query()
             ->when($request->filled('q'), function ($query) use ($request) {
                 $q = $request->string('q');
@@ -24,7 +36,10 @@ class VenueAdminController extends Controller
                         ->orWhere('building', 'like', "%{$q}%");
                 });
             })
-            ->when($request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
+            // Admin wa kawaida amefungiwa campus yake pekee; Super Admin
+            // anaweza kuchuja kwa campus yoyote (au zote).
+            ->when($campusScope, fn ($query) => $query->where('campus', $campusScope))
+            ->when(! $campusScope && $request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
             ->orderBy('name')
             ->paginate(30);
 
@@ -33,12 +48,14 @@ class VenueAdminController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $campusScope = $request->user()->campusScope();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:50', 'unique:venues,code'],
             'building' => ['nullable', 'string', 'max:255'],
             'faculty' => ['nullable', 'string', 'max:255'],
-            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+            'campus' => [$campusScope ? 'nullable' : 'required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
             'capacity' => ['required', 'integer', 'min:0'],
             'type' => ['required', Rule::in(['lecture_hall', 'laboratory', 'seminar_room', 'hall', 'other'])],
             'description' => ['nullable', 'string'],
@@ -48,6 +65,12 @@ class VenueAdminController extends Controller
             'restricted_levels.*' => [Rule::in(['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'])],
             'restricted_department' => ['nullable', 'string', 'max:255'],
         ]);
+
+        // Admin wa kawaida hawezi kuongeza venue kwa campus tofauti na yake
+        // mwenyewe - tunailazimisha (siyo tu kuikataa) ili fomu isivunjike.
+        if ($campusScope) {
+            $data['campus'] = $campusScope;
+        }
 
         $venue = Venue::create([
             ...$data,
@@ -63,6 +86,8 @@ class VenueAdminController extends Controller
 
     public function update(Request $request, Venue $venue): JsonResponse
     {
+        $this->assertCampusAllowed($request, $venue->campus);
+
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'code' => ['sometimes', 'nullable', 'string', 'max:50', Rule::unique('venues', 'code')->ignore($venue->id)],
@@ -80,6 +105,11 @@ class VenueAdminController extends Controller
             'restricted_department' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
+        // Admin wa kawaida hawezi kuihamisha venue kwenda campus nyingine.
+        if ($request->user()->campusScope()) {
+            unset($data['campus']);
+        }
+
         $venue->update($data);
 
         ActivityLog::record($request->user()->id, 'venue_updated', "{$request->user()->name} updated venue {$venue->name}.");
@@ -89,6 +119,8 @@ class VenueAdminController extends Controller
 
     public function destroy(Request $request, Venue $venue): JsonResponse
     {
+        $this->assertCampusAllowed($request, $venue->campus);
+
         $venueName = $venue->name;
         $venue->delete();
 
@@ -107,6 +139,10 @@ class VenueAdminController extends Controller
             'semester_id' => ['required', 'exists:semesters,id'],
             'campus' => ['nullable', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
         ]);
+
+        if ($request->filled('campus')) {
+            $this->assertCampusAllowed($request, $request->string('campus')->toString());
+        }
 
         $count = TimetableSlot::where('semester_id', $request->integer('semester_id'))
             ->when($request->filled('campus'), fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $request->string('campus'))))
@@ -128,6 +164,8 @@ class VenueAdminController extends Controller
             'semester_id' => ['required', 'exists:semesters,id'],
             'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
         ]);
+
+        $this->assertCampusAllowed($request, $data['campus']);
 
         $slotsDeleted = TimetableSlot::where('semester_id', $data['semester_id'])
             ->whereHas('venue', fn ($q) => $q->where('campus', $data['campus']))
@@ -192,6 +230,8 @@ class VenueAdminController extends Controller
             'file' => ['required', 'file', 'mimes:csv,txt'],
             'mode' => ['nullable', 'in:add,replace'],
         ]);
+
+        $this->assertCampusAllowed($request, $request->string('campus')->toString());
 
         $campus = $request->string('campus')->toString();
 
