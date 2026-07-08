@@ -31,6 +31,18 @@ class BookingAdminController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
             ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $term = $request->string('q');
+                $query->where(function ($w) use ($term) {
+                    $w->where('purpose', 'like', "%{$term}%")
+                        ->orWhere('title', 'like', "%{$term}%")
+                        ->orWhere('reason', 'like', "%{$term}%")
+                        ->orWhere('start_time', 'like', "%{$term}%")
+                        ->orWhere('end_time', 'like', "%{$term}%")
+                        ->orWhereHas('venue', fn ($v) => $v->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$term}%"));
+                });
+            })
             ->orderByDesc('booking_date')
             ->orderByDesc('start_time')
             ->paginate($perPage);
