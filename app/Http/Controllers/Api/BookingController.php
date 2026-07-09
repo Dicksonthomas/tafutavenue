@@ -7,7 +7,9 @@ use App\Mail\BookingConfirmedMail;
 use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use App\Models\Booking;
+use App\Models\Notification;
 use App\Models\TimetableSlot;
+use App\Models\User;
 use App\Models\Venue;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -194,6 +196,27 @@ class BookingController extends Controller
                     ." beyond the daily limit, pending Admin review. Reason: {$data['reason']}",
                 $booking->id
             );
+
+            $campus = $request->user()->campus;
+            $adminIds = User::where('role', 'admin')
+                ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $campus))
+                ->pluck('id');
+
+            $now = now();
+            $rows = $adminIds->map(fn ($adminId) => [
+                'user_id' => $adminId,
+                'type' => 'booking_pending',
+                'title' => "{$booking->user->name} requested {$booking->venue->name}",
+                'body' => $data['reason'],
+                'booking_id' => $booking->id,
+                'read_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+
+            if ($rows !== []) {
+                Notification::insert($rows);
+            }
         } else {
             ActivityLog::record(
                 $request->user()->id,

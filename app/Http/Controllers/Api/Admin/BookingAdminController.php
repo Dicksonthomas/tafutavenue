@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Booking;
+use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -68,6 +69,14 @@ class BookingAdminController extends Controller
             $booking->id
         );
 
+        Notification::send(
+            $booking->user_id,
+            'booking_approved',
+            "Your booking for {$booking->venue->name} was approved",
+            null,
+            $booking->id
+        );
+
         return response()->json($booking);
     }
 
@@ -91,6 +100,14 @@ class BookingAdminController extends Controller
             $request->user()->id,
             'booking_rejected',
             "Admin rejected the booking of {$booking->venue->name} for {$booking->user->name}: {$data['rejection_reason']}",
+            $booking->id
+        );
+
+        Notification::send(
+            $booking->user_id,
+            'booking_rejected',
+            "Your booking for {$booking->venue->name} was rejected",
+            $data['rejection_reason'],
             $booking->id
         );
 

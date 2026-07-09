@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
+use App\Http\Controllers\Api\Admin\AnnouncementController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
 use App\Http\Controllers\Api\Admin\ReportController;
 use App\Http\Controllers\Api\Admin\SettingsController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\Admin\UserAdminController;
 use App\Http\Controllers\Api\Admin\VenueAdminController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Api\SemesterController;
 use App\Http\Controllers\Api\TimetableSlotController;
@@ -52,6 +54,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::post('/bookings/{booking}/sign', [BookingController::class, 'sign']);
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
 
     // -------------------------------------------------------------
     // ADMIN ONLY
@@ -106,5 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/logs/actions', [ActivityLogController::class, 'actions']);
         Route::delete('/logs/{log}', [ActivityLogController::class, 'destroy']);
         Route::delete('/logs', [ActivityLogController::class, 'destroyAll']);
+
+        Route::post('/announcements', [AnnouncementController::class, 'store']);
     });
 });
