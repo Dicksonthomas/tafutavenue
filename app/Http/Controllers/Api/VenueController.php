@@ -72,7 +72,67 @@ class VenueController extends Controller
             ->orderBy('name')
             ->get();
 
+        $this->attachOccupiedUntil($venues);
+
         return response()->json($venues);
+    }
+
+    /**
+     * For each venue, if it's occupied RIGHT NOW (an official lecture or a
+     * booking covering the current moment, today), sets a dynamic
+     * `occupied_until` (HH:MM) attribute so a CR browsing venues can see
+     * "free again at 18:00" instead of just a static Available/Maintenance
+     * badge. Back-to-back intervals (e.g. two chained lecture slots) are
+     * merged so the shown time reflects when the venue is genuinely free.
+     * Left null for a venue that's free right now.
+     */
+    private function attachOccupiedUntil($venues): void
+    {
+        if ($venues->isEmpty()) {
+            return;
+        }
+
+        $now = Carbon::now();
+        $dayOfWeek = $now->format('l');
+        $nowTime = $now->format('H:i');
+        $venueIds = $venues->pluck('id');
+        $semester = Semester::where('is_active', true)->first();
+
+        $timetable = $semester
+            ? TimetableSlot::where('semester_id', $semester->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->whereIn('venue_id', $venueIds)
+                ->get(['venue_id', 'start_time', 'end_time'])
+            : collect();
+
+        $bookings = Booking::whereDate('booking_date', $now->toDateString())
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereIn('venue_id', $venueIds)
+            ->get(['venue_id', 'start_time', 'end_time']);
+
+        $venues->each(function (Venue $venue) use ($timetable, $bookings, $nowTime) {
+            // concat(), not merge() - see the note in available() for why.
+            $intervals = $timetable->where('venue_id', $venue->id)
+                ->concat($bookings->where('venue_id', $venue->id))
+                ->map(fn ($b) => [
+                    'start' => substr((string) $b->start_time, 0, 5),
+                    'end' => (string) $b->end_time === '00:00' ? '23:59' : substr((string) $b->end_time, 0, 5),
+                ])
+                ->sortBy('start')
+                ->values();
+
+            $occupiedUntil = null;
+
+            foreach ($intervals as $interval) {
+                if ($interval['start'] <= $nowTime && $nowTime < $interval['end']) {
+                    $occupiedUntil = $interval['end'];
+                } elseif ($occupiedUntil !== null && $interval['start'] <= $occupiedUntil) {
+                    $occupiedUntil = max($occupiedUntil, $interval['end']);
+                }
+            }
+
+            $venue->occupied_until = $occupiedUntil;
+        });
     }
 
     /**
@@ -146,8 +206,13 @@ class VenueController extends Controller
             ->get(['venue_id', 'start_time', 'end_time']);
 
         $availableVenues->each(function (Venue $venue) use ($allTimetable, $allBookings, $data) {
+            // concat(), not merge() - Eloquent\Collection::merge() dedupes by
+            // the model's primary key (getKey()), and these rows were
+            // fetched without `id` (only the 3 columns needed here), so two
+            // unrelated TimetableSlot/Booking rows could silently collide
+            // and one would be dropped from the interval list.
             $busy = $allTimetable->where('venue_id', $venue->id)
-                ->merge($allBookings->where('venue_id', $venue->id))
+                ->concat($allBookings->where('venue_id', $venue->id))
                 ->map(fn ($b) => ['start' => (string) $b->start_time, 'end' => (string) $b->end_time])
                 ->sortBy('start')
                 ->values();

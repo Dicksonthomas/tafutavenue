@@ -88,17 +88,37 @@ class BookingController extends Controller
             return response()->json(['message' => 'End time must be after start time.'], 422);
         }
 
+        // A "Test" is meant to be short - cap it at 1 hour so it doesn't tie
+        // up a venue as long as a full Study Unit session would.
+        if ($data['purpose'] === 'test') {
+            $durationMinutes = Carbon::parse($data['start_time'])->diffInMinutes(Carbon::parse($data['end_time']));
+
+            if ($durationMinutes > 60) {
+                return response()->json([
+                    'message' => 'A Test booking cannot be longer than 1 hour (e.g. 17:00-18:00). Please shorten the time.',
+                ], 422);
+            }
+        }
+
         if ($data['purpose'] === 'study_unit') {
             $configuredHours = AppSetting::current()->study_unit_hours[$dayOfWeek] ?? null;
             $windowStart = $configuredHours['start'] ?? '19:00';
             $windowEndRaw = $configuredHours['end'] ?? '00:00';
             $windowEnd = $windowEndRaw === '00:00' ? '23:59' : $windowEndRaw;
+            $windowEndLabel = $windowEndRaw === '00:00' ? 'midnight' : $windowEndRaw;
 
             if ($data['start_time'] < $windowStart || $data['start_time'] > $windowEnd) {
-                $windowEndLabel = $windowEndRaw === '00:00' ? 'midnight' : $windowEndRaw;
-
                 return response()->json([
                     'message' => "Study Unit bookings on {$dayOfWeek} are only allowed from {$windowStart} until {$windowEndLabel}.",
+                ], 422);
+            }
+
+            // The start time alone being in-window isn't enough - the booking
+            // must also finish by the end of the window, or it would quietly
+            // run past the hours the Admin configured.
+            if ($data['end_time'] > $windowEnd) {
+                return response()->json([
+                    'message' => "Study Unit bookings on {$dayOfWeek} must end by {$windowEndLabel} - choose an earlier end time.",
                 ], 422);
             }
         }
@@ -144,9 +164,11 @@ class BookingController extends Controller
         )->with('user:id,name')->first();
 
         if ($conflictingBooking) {
-            $conflictMessage = "Venue {$venue->name} is already booked by {$conflictingBooking->user->name} "
-                ."from {$conflictingBooking->start_time} to {$conflictingBooking->end_time} on "
-                .Carbon::parse($conflictingBooking->booking_date)->format('d/m/Y').'.';
+            $conflictPurpose = str_replace('_', ' ', $conflictingBooking->purpose);
+            $conflictMessage = "{$venue->name} is currently booked by {$conflictingBooking->user->name} for a {$conflictPurpose} "
+                ."from {$conflictingBooking->start_time} until {$conflictingBooking->end_time} on "
+                .Carbon::parse($conflictingBooking->booking_date)->format('d/m/Y')
+                .". Please wait until then, or choose another time or venue.";
 
             ActivityLog::record(
                 $request->user()->id,
