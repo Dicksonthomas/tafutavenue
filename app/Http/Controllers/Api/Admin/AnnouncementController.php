@@ -16,8 +16,9 @@ class AnnouncementController extends Controller
     private const VALID_LEVELS = ['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'];
 
     /**
-     * Announcements the Admin can manage - their own, or every one if
-     * they're a Super Admin (same oversight pattern as Admin management).
+     * Announcements the logged-in Admin has personally posted - never
+     * another Admin's, even for a Super Admin, so "My Announcements" only
+     * ever shows what "My" actually means.
      */
     public function index(Request $request): JsonResponse
     {
@@ -25,7 +26,7 @@ class AnnouncementController extends Controller
         $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
 
         $announcements = Announcement::with('admin:id,name')
-            ->when(! $request->user()->isSuperAdmin(), fn ($q) => $q->where('admin_id', $request->user()->id))
+            ->where('admin_id', $request->user()->id)
             ->withCount([
                 'notifications',
                 'notifications as read_count' => fn ($q) => $q->whereNotNull('read_at'),
@@ -39,7 +40,7 @@ class AnnouncementController extends Controller
     private function assertManageable(Request $request, Announcement $announcement): void
     {
         abort_unless(
-            $announcement->admin_id === $request->user()->id || $request->user()->isSuperAdmin(),
+            $announcement->admin_id === $request->user()->id,
             403,
             'You can only manage your own announcements.'
         );
