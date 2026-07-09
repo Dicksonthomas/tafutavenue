@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TimetableSlot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ReferenceDataController extends Controller
 {
@@ -64,30 +65,58 @@ class ReferenceDataController extends Controller
     /**
      * Real programs pulled from the university timetable (course scheduling
      * data), for the live-search dropdown during registration.
+     *
+     * This scans and regex-parses every distinct `program` value in
+     * timetable_slots, which grows with every import - too expensive to redo
+     * on every page load, so it's cached and only recomputed when the
+     * timetable actually changes (see forgetProgramsCache(), called from the
+     * timetable import/clear endpoints).
      */
     public function programs(Request $request): JsonResponse
     {
-        $programs = TimetableSlot::query()
-            ->when($request->filled('campus'), fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $request->string('campus'))))
-            ->whereNotNull('program')
-            ->where('program', '!=', '')
-            ->distinct()
-            ->pluck('program')
-            ->flatMap(function ($p) {
-                // In the timetable, multiple programs sharing one course are
-                // stored joined by spaces (not commas), e.g.
-                // "BAF-BS 1A BAF-BS 1B BSc.ICTB 1" - each token is
-                // "CODE YEAR" (e.g. "BSc.ICTB 1" or "BAF-BS 1A").
-                preg_match_all('/[A-Za-z][A-Za-z.\-]*\s+\d+[A-Za-z]?/', $p, $matches);
+        $campus = $request->filled('campus') ? $request->string('campus')->toString() : null;
 
-                return $matches[0] ?: [trim($p)];
-            })
-            ->map(fn ($p) => trim($p))
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
+        $programs = Cache::remember(self::programsCacheKey($campus), now()->addHours(6), function () use ($campus) {
+            return TimetableSlot::query()
+                ->when($campus, fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $campus)))
+                ->whereNotNull('program')
+                ->where('program', '!=', '')
+                ->distinct()
+                ->pluck('program')
+                ->flatMap(function ($p) {
+                    // In the timetable, multiple programs sharing one course are
+                    // stored joined by spaces (not commas), e.g.
+                    // "BAF-BS 1A BAF-BS 1B BSc.ICTB 1" - each token is
+                    // "CODE YEAR" (e.g. "BSc.ICTB 1" or "BAF-BS 1A").
+                    preg_match_all('/[A-Za-z][A-Za-z.\-]*\s+\d+[A-Za-z]?/', $p, $matches);
+
+                    return $matches[0] ?: [trim($p)];
+                })
+                ->map(fn ($p) => trim($p))
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+        });
 
         return response()->json($programs);
+    }
+
+    private static function programsCacheKey(?string $campus): string
+    {
+        return 'reference:programs:'.($campus ?? 'all');
+    }
+
+    /**
+     * Called after any timetable import/replace/clear so the next
+     * programs() request recomputes instead of serving stale data.
+     */
+    public static function forgetProgramsCache(): void
+    {
+        Cache::forget(self::programsCacheKey(null));
+        foreach (self::CAMPUSES as $campus) {
+            Cache::forget(self::programsCacheKey($campus['value']));
+        }
     }
 }

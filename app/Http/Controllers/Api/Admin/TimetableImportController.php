@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Controller;
 use App\Models\Semester;
 use App\Models\TimetableSlot;
@@ -48,6 +49,8 @@ class TimetableImportController extends Controller
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        ReferenceDataController::forgetProgramsCache();
 
         $message = "Timetable imported: {$result['venues']} venues, {$result['slots_created']} new timetable slots.";
 

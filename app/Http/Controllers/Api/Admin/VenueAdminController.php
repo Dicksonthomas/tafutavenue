@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Booking;
@@ -194,6 +195,8 @@ class VenueAdminController extends Controller
 
         $venuesKept = $candidateVenueIds->count() - $venuesDeleted;
 
+        ReferenceDataController::forgetProgramsCache();
+
         $message = "Timetable data deleted: {$slotsDeleted} schedule entries, {$venuesDeleted} venues.";
 
         if ($venuesKept > 0) {
@@ -290,6 +293,8 @@ class VenueAdminController extends Controller
         }
 
         fclose($handle);
+
+        ReferenceDataController::forgetProgramsCache();
 
         return response()->json([
             'message' => "Timetable imported: {$created} created, {$skipped} skipped (already exist).",
