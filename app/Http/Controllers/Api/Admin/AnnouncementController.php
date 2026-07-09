@@ -16,17 +16,20 @@ class AnnouncementController extends Controller
     private const VALID_LEVELS = ['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'];
 
     /**
-     * Announcements the logged-in Admin has personally posted - never
-     * another Admin's, even for a Super Admin, so "My Announcements" only
-     * ever shows what "My" actually means.
+     * Announcements posted by any Admin on the viewer's own campus - or
+     * every campus, for a Super Admin. Seeing it here doesn't mean they can
+     * manage it though - edit/delete stays locked to the actual author (see
+     * assertManageable()).
      */
     public function index(Request $request): JsonResponse
     {
         $perPageInput = $request->input('per_page', 20);
         $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
 
+        $campusScope = $request->user()->campusScope();
+
         $announcements = Announcement::with('admin:id,name')
-            ->where('admin_id', $request->user()->id)
+            ->when($campusScope, fn ($q) => $q->whereHas('admin', fn ($a) => $a->where('campus', $campusScope)))
             ->withCount([
                 'notifications',
                 'notifications as read_count' => fn ($q) => $q->whereNotNull('read_at'),
@@ -52,9 +55,9 @@ class AnnouncementController extends Controller
      * - 'cr' (default): CRs matching the campus/faculty/department/program/
      *   level/year filters (a regular Admin is always locked to their own
      *   campus; a Super Admin may pick one, or leave it blank for everyone
-     *   university-wide). Every other Admin in that same campus scope also
-     *   gets a read-only copy (type=announcement_cr_copy), so they can see
-     *   what's being told to their CRs without being able to edit/delete it.
+     *   university-wide). Other admins don't get a Notification for this -
+     *   they already see it (full detail, not just a title) via index()
+     *   above, since it's on their campus.
      * - 'admin': every other Admin, campus not relevant.
      */
     public function store(Request $request): JsonResponse
@@ -111,15 +114,7 @@ class AnnouncementController extends Controller
                 ->when(! empty($data['year_of_study']), fn ($q) => $q->where('year_of_study', $data['year_of_study']))
                 ->pluck('id');
 
-            $effectiveCampus = $campusScope ?? ($data['campus'] ?? null);
-            $adminCcIds = User::where('role', 'admin')
-                ->where('id', '!=', $request->user()->id)
-                ->when($effectiveCampus, fn ($q) => $q->where('campus', $effectiveCampus))
-                ->pluck('id');
-
-            $rows = $crIds->map(fn ($id) => $notificationRow($id, 'announcement'))
-                ->merge($adminCcIds->map(fn ($id) => $notificationRow($id, 'announcement_cr_copy')))
-                ->all();
+            $rows = $crIds->map(fn ($id) => $notificationRow($id, 'announcement'))->all();
             $recipientCount = $crIds->count();
         }
 
