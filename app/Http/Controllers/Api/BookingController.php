@@ -26,6 +26,9 @@ class BookingController extends Controller
 
     private const EDITABLE_STATUSES = ['pending', 'approved'];
 
+    /** How long after creating a booking a CR may still self-edit it. */
+    private const EDIT_WINDOW_MINUTES = 10;
+
     /**
      * Bookings belonging to the logged-in CR.
      */
@@ -121,9 +124,12 @@ class BookingController extends Controller
     /**
      * Let a CR fix a booking they got wrong (date/time/venue/purpose) rather
      * than cancel and start over. Only while it's still Pending or Approved
-     * (not yet Rejected/Cancelled) - runs through the exact same rules as
-     * creating a new booking, and can just as easily land back on Pending
-     * if the new time now needs Admin review.
+     * (not yet Rejected/Cancelled), and only within EDIT_WINDOW_MINUTES of
+     * submitting it - a short grace period to catch a mistake, not an
+     * open-ended edit right (an Admin's edit endpoint has no such limit).
+     * Runs through the exact same rules as creating a new booking, and can
+     * just as easily land back on Pending if the new time now needs Admin
+     * review.
      */
     public function update(Request $request, Booking $booking): JsonResponse
     {
@@ -132,6 +138,11 @@ class BookingController extends Controller
             in_array($booking->status, self::EDITABLE_STATUSES, true),
             422,
             'This booking is already closed and can no longer be edited - make a new booking instead.'
+        );
+        abort_if(
+            $booking->created_at->diffInMinutes(now()) > self::EDIT_WINDOW_MINUTES,
+            422,
+            'You can only edit a booking within '.self::EDIT_WINDOW_MINUTES.' minutes of creating it - that window has passed.'
         );
 
         $data = $request->validate($this->validationRules());
