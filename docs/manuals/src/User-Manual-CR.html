@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>User Manual - Class Representatives</title>
+<style>
+@page { margin: 0; }
+* { box-sizing: border-box; }
+body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+.page { padding: 40px 48px; page-break-after: always; }
+.page:last-child { page-break-after: avoid; }
+.eyebrow { font-size: 8.5pt; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #da4e1f; margin-bottom: 8px; }
+h1 { font-size: 22pt; color: #002d62; margin: 0 0 10px 0; font-weight: 700; }
+.subtitle { font-size: 10.5pt; color: #64748b; margin: 0 0 14px 0; max-width: 620px; }
+.meta { font-size: 8.5pt; color: #94a3b8; padding-bottom: 16px; border-bottom: 2px solid #002d62; margin-bottom: 22px; }
+.meta b { color: #475569; }
+h2 { font-size: 13pt; color: #002d62; margin: 18px 0 8px 0; }
+h2 .num { display:inline-block; color:#da4e1f; font-size:9pt; font-weight:700; margin-right:6px; }
+h3 { font-size: 11pt; color:#0f172a; margin: 14px 0 4px 0; }
+p { margin: 0 0 10px 0; color:#334155; }
+hr.sep { border:0; border-top:1px solid #e2e8f0; margin: 16px 0; }
+table { width:100%; border-collapse: collapse; margin: 8px 0 14px 0; font-size: 9.5pt; }
+th { text-align:left; font-size:8pt; text-transform:uppercase; letter-spacing:0.5px; color:#94a3b8; border-bottom:1px solid #cbd5e1; padding:6px 8px; }
+td { padding:7px 8px; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:top; }
+.box { border-radius:8px; padding:10px 14px; margin: 10px 0 16px 0; font-size:9.5pt; }
+.box-title { font-weight:700; font-size:8.5pt; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.box-info { background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; }
+.box-info .box-title { color:#475569; }
+.box-warn { background:#fffbeb; border:1px solid #fde68a; color:#78350f; }
+.box-warn .box-title { color:#92400e; }
+.box-good { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+.box-good .box-title { color:#047857; }
+.badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:8.5pt; font-weight:600; }
+.badge-pending { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+.badge-approved { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
+.badge-rejected { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
+.badge-cancelled { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+.stepnum { display:inline-block; width:16px; height:16px; background:#002d62; color:#fff; border-radius:3px; text-align:center; font-size:8pt; line-height:16px; margin-right:6px; }
+code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:1px 5px; font-family: "Courier New", monospace; font-size:9pt; color:#334155; }
+ul { margin:6px 0 12px 20px; padding:0; color:#334155; }
+li { margin-bottom:5px; }
+.small { font-size:8.5pt; color:#94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="eyebrow">User Manual &middot; Part 1 of 2</div>
+  <h1>Venue Booking System &mdash; For Class Representatives</h1>
+  <p class="subtitle">How to register, find a free venue on your own campus, book it, keep track of what's been approved, and stay on top of notifications and announcements &mdash; on the web or as an installed app.</p>
+  <div class="meta"><b>Audience</b> Class Representatives (CR) &middot; <b>Covers</b> Morogoro Main, Dar es Salaam, Tanga, Mbeya &middot; <b>Companion document</b> Admin Manual (Part 2)</div>
+
+  <h2><span class="num">1.1</span>Creating your account</h2>
+  <p>Go to the <b>Register</b> page. You don't choose your own login email &mdash; the system builds it for you from your name and Reg No, so it always matches your official student identity.</p>
+  <p><span class="stepnum">1</span><b>Full Name</b> &mdash; enter your complete name exactly as registered with the university.</p>
+  <p><span class="stepnum">2</span><b>Reg No</b> &mdash; enter it in full, e.g. <code>14322055/T.25</code>. The last two digits after the dot must be your intake year; the system shows a live preview of the email it will create, such as <code>firstname.lastname25@mustudent.ac.tz</code>.</p>
+  <p><span class="stepnum">3</span>If your Reg No isn't accepted (too old an intake year, or the year hasn't opened for registration yet &mdash; new intakes unlock every October), use <b>Enter Email Manually</b> instead, or ask an Admin to register you.</p>
+  <p><span class="stepnum">4</span><b>Phone, Campus, Sex, Faculty, Department, Program, Level,</b> and <b>Year of Study</b> &mdash; fill these in; Program offers a live search drawn from the real teaching timetable.</p>
+  <p><span class="stepnum">5</span><b>Submit.</b> A temporary password is generated automatically and emailed to you &mdash; nobody, including Admins, can see it on screen.</p>
+  <div class="box box-info"><div class="box-title">Didn't get the email?</div>Check your spam folder first. If it's genuinely missing, ask an Admin to look you up on the Students page.</div>
+
+  <h2><span class="num">1.2</span>Logging in</h2>
+  <p>Enter your email and the password from your welcome email, then <b>Sign In</b>. First thing after logging in, go to <b>Change Password</b> and set one you'll remember. Once signed in, you stay signed in &mdash; there's no need to log in again each time you close the app, on the web or on your phone, until you explicitly log out.</p>
+  <div class="box box-info"><div class="box-title">Wrong password?</div>The error message stays on screen until you dismiss it, refresh, or a minute passes &mdash; it won't vanish on you mid-read.</div>
+
+  <h2><span class="num">1.3</span>Dashboard</h2>
+  <p>Your <b>Dashboard</b> is the first thing you see after logging in: a quick count of your bookings, what's coming up next, and a short activity feed covering your own actions plus other CRs' booking activity on your campus.</p>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2><span class="num">1.4</span>Booking a venue</h2>
+  <p>Open <b>Find Venue</b> &mdash; the main booking screen.</p>
+  <p><span class="stepnum">1</span>Choose the <b>Semester</b>, <b>Date</b>, and the <b>Start/End</b> time you need.</p>
+  <p><span class="stepnum">2</span>The system lists every venue genuinely free for that window &mdash; already checked against the official timetable and everyone else's bookings, so nothing shown can clash. Each result also shows the fuller stretch it's free for (e.g. "Free 09:00&ndash;12:00").</p>
+  <p><span class="stepnum">3</span>Pick a venue and choose a <b>Purpose</b>: Study Unit, Test, Makeup Class, Meeting, or Other. Add an optional title.</p>
+  <p><span class="stepnum">4</span>Draw your <b>Digital Signature</b> on the pad &mdash; required to confirm the booking.</p>
+  <p><span class="stepnum">5</span><b>Confirm Booking.</b> If nothing needs extra review, you're approved immediately and a confirmation email arrives right away.</p>
+  <div class="box box-warn"><div class="box-title">Study Unit bookings have fixed hours</div>Each campus sets its own allowed time window per day of the week for Study Unit bookings. If your time falls outside it, you'll be told the allowed window for that day.</div>
+
+  <h2><span class="num">1.5</span>The 2-a-day rule</h2>
+  <p>Each CR gets <b>two bookings per day approved automatically</b>. A third on the same day works differently:</p>
+  <div class="box box-good"><div class="box-title">Beyond 2 bookings in one day</div>A <b>Reason</b> box appears in the booking form. Explain briefly why you need another venue that day. Instead of auto-approving, the request goes to your campus Admin to review.</div>
+  <p>You'll see it as <b>Pending</b> in My Bookings until an Admin approves or rejects it &mdash; and you'll get a notification the moment they decide (see &sect;1.10).</p>
+
+  <h2><span class="num">1.6</span>My Bookings &amp; signing</h2>
+  <p>Every booking you've made lives in <b>My Bookings</b>, each showing its status: <span class="badge badge-pending">Pending</span> <span class="badge badge-approved">Approved</span> <span class="badge badge-rejected">Rejected</span> <span class="badge badge-cancelled">Cancelled</span></p>
+  <ul>
+    <li>If an Admin (rather than the automatic system) approved it, you'll see "Approved by [name]" under the status.</li>
+    <li>If it needed a reason under the 2-a-day rule, your reason is shown on the card.</li>
+    <li>A rejected booking always shows the Admin's rejection reason.</li>
+    <li>While still Pending, press <b>Cancel Booking</b> to withdraw it yourself.</li>
+    <li>If a booking is Approved but not yet signed, an <b>Add Digital Signature</b> button appears &mdash; this happens for bookings an Admin approved after review.</li>
+  </ul>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h2><span class="num">1.7</span>Venues, timetable &amp; lecturers</h2>
+  <h3>All Venues</h3>
+  <p>Browse every usable venue on your campus, searchable by name, code, or building &mdash; useful for getting your bearings, not for checking live availability (use Find Venue for that).</p>
+  <h3>Booked Venues</h3>
+  <p>Pick any date to see everything already occupying venues that day &mdash; both official lectures and other CRs' bookings.</p>
+  <h3>Lecturer Timetable</h3>
+  <p>Type a lecturer's name to pull up their entire weekly teaching schedule &mdash; venue, day, and time.</p>
+
+  <h2><span class="num">1.8</span>Profile &amp; settings</h2>
+  <p><b>My Profile</b> shows your registered details. <b>Settings</b> lets you pick a personal accent color for your own account. <b>Change Password</b> is under the account menu at any time.</p>
+
+  <h2><span class="num">1.9</span>Installing &amp; using it offline</h2>
+  <p>On a phone, use your browser's <b>Add to Home Screen</b> option (an <b>Install App</b> button also appears in the top bar when available) to add the system as its own icon, like a native app.</p>
+  <div class="box box-info"><div class="box-title">What still works without signal</div>Once you've opened the app online at least once, pages and data you've already viewed &mdash; your bookings, the venue list, settings &mdash; stay readable with no connection. A banner reading "You're offline" appears, and a "Back online" note confirms when reconnected.</div>
+  <p>Actions that reach the server &mdash; making a new booking, signing, saving anything &mdash; still need a live connection, and will tell you plainly you're offline rather than failing silently or logging you out.</p>
+
+  <h2><span class="num">1.10</span>Notifications</h2>
+  <p>The bell icon in the top bar shows how many notifications you haven't read yet, as a number. Click it to open your <b>Notifications</b> page.</p>
+  <ul>
+    <li><b>Booking Approved</b> / <b>Booking Rejected</b> &mdash; sent the moment your booking is decided, whether automatically or by an Admin. A rejection always includes the reason.</li>
+    <li><b>Announcement</b> &mdash; a message your campus Admin has broadcast to CRs (e.g. a schedule change or general notice).</li>
+  </ul>
+  <p>Filter by <b>type</b>, <b>read/unread</b> status, a specific <b>date</b>, or search by keyword. Click any notification to mark it read and reveal its full message &mdash; or use <b>Mark all as read</b> to clear everything at once.</p>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2>&sect; Booking status glossary</h2>
+  <table>
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td><span class="badge badge-pending">Pending</span></td><td>Waiting on a campus Admin &mdash; always a 3rd-or-later booking that day, with a reason attached.</td></tr>
+    <tr><td><span class="badge badge-approved">Approved</span></td><td>Confirmed, either instantly by the system or by an Admin. Check for "Approved by [name]" to tell which.</td></tr>
+    <tr><td><span class="badge badge-rejected">Rejected</span></td><td>Declined by an Admin, with a reason shown to you.</td></tr>
+    <tr><td><span class="badge badge-cancelled">Cancelled</span></td><td>Withdrawn by you while it was still Pending.</td></tr>
+  </table>
+
+  <hr class="sep">
+
+  <h2>&sect; Troubleshooting</h2>
+  <h3>"I don't see the venue I'm looking for."</h3>
+  <p>Find Venue only lists venues genuinely free for the exact date and time chosen. Try Booked Venues for that date, or widen your time range.</p>
+  <h3>"My booking needs a reason I didn't expect."</h3>
+  <p>You've already got two bookings on that date &mdash; see &sect;1.5.</p>
+  <h3>"The page looks stuck offline."</h3>
+  <p>Pages and data you've opened before stay viewable with no connection, but anything that saves to the server needs to be online. Reconnect and try again.</p>
+  <h3>"I got a notification but I'm not sure what it means."</h3>
+  <p>Click it &mdash; it expands to show the full message. If it's an Announcement, it was sent by your campus Admin to every CR, not to you specifically.</p>
+</div>
+
+</body>
+</html>

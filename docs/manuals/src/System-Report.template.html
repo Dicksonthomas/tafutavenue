@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>System Report - University Venue Booking System</title>
+<style>
+@page { margin: 0; }
+* { box-sizing: border-box; }
+body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+.page { padding: 40px 48px; page-break-after: always; }
+.page:last-child { page-break-after: avoid; }
+.eyebrow { font-size: 8.5pt; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #da4e1f; margin-bottom: 8px; }
+h1 { font-size: 22pt; color: #002d62; margin: 0 0 10px 0; font-weight: 700; }
+.subtitle { font-size: 10.5pt; color: #64748b; margin: 0 0 14px 0; max-width: 640px; }
+.meta { font-size: 8.5pt; color: #94a3b8; padding-bottom: 16px; border-bottom: 2px solid #002d62; margin-bottom: 22px; }
+.meta b { color: #475569; }
+h2 { font-size: 13pt; color: #002d62; margin: 18px 0 8px 0; }
+h2 .num { display:inline-block; color:#da4e1f; font-size:9pt; font-weight:700; margin-right:6px; }
+h3 { font-size: 11pt; color:#0f172a; margin: 14px 0 4px 0; }
+p { margin: 0 0 10px 0; color:#334155; }
+hr.sep { border:0; border-top:1px solid #e2e8f0; margin: 16px 0; }
+table { width:100%; border-collapse: collapse; margin: 8px 0 14px 0; font-size: 9.5pt; }
+th { text-align:left; font-size:8pt; text-transform:uppercase; letter-spacing:0.5px; color:#94a3b8; border-bottom:1px solid #cbd5e1; padding:6px 8px; }
+td { padding:7px 8px; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:top; }
+.box { border-radius:8px; padding:10px 14px; margin: 10px 0 16px 0; font-size:9.5pt; }
+.box-title { font-weight:700; font-size:8.5pt; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.box-good { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+.box-good .box-title { color:#047857; }
+.badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:8.5pt; font-weight:600; }
+.badge-pending { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+.badge-approved { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
+.badge-rejected { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
+.badge-cancelled { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+.stats { width:100%; margin:14px 0 6px 0; border-collapse: separate; border-spacing: 10px 0; }
+.stats td { border:0; padding:0; width:25%; }
+.stat-box { border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
+.stat-num { font-size:16pt; font-weight:700; color:#002d62; }
+.stat-label { font-size:7.5pt; text-transform:uppercase; letter-spacing:0.5px; color:#94a3b8; }
+ul { margin:6px 0 12px 20px; padding:0; color:#334155; }
+li { margin-bottom:5px; }
+.small { font-size:8.5pt; color:#94a3b8; }
+img.diagram { width:100%; max-width:100%; margin: 10px 0 6px 0; border: 1px solid #e2e8f0; border-radius: 8px; }
+.diagram-caption { font-size: 8.5pt; color:#94a3b8; text-align:center; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="eyebrow">System Report</div>
+  <h1>University Venue Booking System</h1>
+  <p class="subtitle">A campus-scoped venue reservation platform for Mzumbe University &mdash; what it does, who uses it, how access and approvals are structured, and how CRs and Admins are kept informed.</p>
+  <div class="meta"><b>Campuses</b> Morogoro Main, Dar es Salaam, Tanga, Mbeya &middot; <b>Platforms</b> Web application, installable PWA, native mobile app &middot; <b>Companion documents</b> User Manual, Admin Manual</div>
+
+  <h2><span class="num">1</span>Purpose &amp; scope</h2>
+  <p>The system replaces informal, first-come arrangements for booking lecture halls, laboratories, seminar rooms, and halls with a single reservation record per venue, checked automatically against the official teaching timetable so a booking can never collide with a scheduled class. Each of the university's four campuses runs on the same platform but operates as an isolated unit &mdash; venues, timetables, bookings, and people registered on one campus are never visible from another, except to a Super Admin managing the university as a whole.</p>
+
+  <table class="stats">
+    <tr>
+      <td><div class="stat-box"><div class="stat-num">4</div><div class="stat-label">Campuses served</div></div></td>
+      <td><div class="stat-box"><div class="stat-num">3</div><div class="stat-label">Account roles</div></div></td>
+      <td><div class="stat-box"><div class="stat-num">2/day</div><div class="stat-label">Free auto-approved bookings</div></div></td>
+      <td><div class="stat-box"><div class="stat-num">2</div><div class="stat-label">Notification audiences</div></div></td>
+    </tr>
+  </table>
+
+  <h2><span class="num">2</span>Who uses it</h2>
+  <table>
+    <tr><th>Role</th><th>Who</th><th>Access</th></tr>
+    <tr><td><b>Class Rep (CR)</b></td><td>A registered student representative</td><td>Own bookings; own campus's venues, timetable, and notifications</td></tr>
+    <tr><td><b>Admin</b></td><td>Staff managing one campus</td><td>Everything for that campus only, including its Admins' announcements</td></tr>
+    <tr><td><b>Super Admin</b></td><td>Staff managing the whole university</td><td>All four campuses; also manages other Admins</td></tr>
+  </table>
+  <p>A CR self-registers; their login email is generated automatically from their name and registration number rather than chosen by them, tying every account to a verifiable student identity. Admin and Super Admin accounts are created by an existing Super Admin &mdash; there is no public sign-up path into either.</p>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2><span class="num">3</span>The booking workflow</h2>
+  <p>A CR chooses a semester, date, and time window; the system returns only venues that are genuinely free &mdash; cross-checked against both the official timetable and every other CR's existing booking for that slot &mdash; so what's offered can never actually clash. A digital signature, drawn on screen, is required to confirm.</p>
+  <p>To keep venues available fairly across a busy campus, each CR is auto-approved for up to <b>two bookings per calendar day</b>. A third request on the same day requires a written reason and is held as <span class="badge badge-pending">Pending</span> for their campus Admin to approve or reject &mdash; the same review queue Admins already use for anything needing a human decision. Once decided, the CR is notified immediately, and if it was reviewed by a person rather than the system, the record shows exactly who approved it.</p>
+  <div class="box box-good"><div class="box-title">Why a limit at all</div>Unrestricted same-day booking by a small number of CRs was capable of exhausting a campus's available venues; the two-a-day allowance covers ordinary use without any review step, while a documented reason is asked for anything beyond it.</div>
+
+  <h2><span class="num">4</span>Feature overview, by area</h2>
+  <h3>Venues</h3>
+  <p>Add, edit, and retire venues per campus, with capacity, type, and optional restrictions by booking purpose, academic level, or department.</p>
+  <h3>Timetable import</h3>
+  <p>Official lecture schedules are pulled directly from the university's published timetable (by link) or a CSV file, per semester and campus, in either additive or replace mode.</p>
+  <h3>Bookings</h3>
+  <p>A searchable, filterable review queue for every booking &mdash; approve, reject with a reason, or delete &mdash; plus a PDF report scoped to a status and, optionally, a single date.</p>
+  <h3>Booked Venues</h3>
+  <p>A day-by-day or full-history read view of what's occupying every venue, including each booking's captured signature.</p>
+  <h3>Semesters</h3>
+  <p>Defines the academic terms bookings and timetable imports are organized under; exactly one is active at a time.</p>
+  <h3>Students (CR) management</h3>
+  <p>Individual or bulk (CSV) registration, editing (including correcting a Reg No after the fact), and removal. Removal is a soft delete &mdash; personal details are cleared, but booking history is preserved under a placeholder identity.</p>
+  <h3>Admin management</h3>
+  <p>Super Admins create and manage Admin accounts, assign each to a campus, and may promote another Admin to Super Admin. One original account &mdash; the Main Super Admin &mdash; is permanently protected from edits, demotion, or removal by anyone else.</p>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h3>Notifications</h3>
+  <p>A persisted, per-recipient notification record with read/unread state &mdash; not a client-side approximation. A CR is notified the moment a booking is approved or rejected; an Admin is notified the moment a CR's booking needs review, with a direct link into the review queue. An unread count badge is shown on a bell icon in the header at all times, updating live.</p>
+  <h3>Announcements</h3>
+  <p>Any Admin can broadcast a message either to CRs (their own campus, or a chosen/every campus for a Super Admin, optionally narrowed by faculty, department, program, level, or year of study) or directly to fellow Admins. Every Admin can see what's been announced on their own campus &mdash; by any Admin, not only themselves &mdash; along with how many people received it and how many have read it, though editing or deleting a given announcement stays restricted to whoever originally posted it.</p>
+  <h3>Activity logs</h3>
+  <p>A record of logins, bookings, and administrative actions, filterable by action type. A Super Admin's own actions are visible only to that Super Admin, keeping day-to-day Admin oversight uncluttered.</p>
+  <h3>Settings &amp; branding</h3>
+  <p>System color and logo (any Admin); app name, support phone, footer, and login-page appearance (Super Admin only); per-weekday booking hours for Study Unit purpose bookings.</p>
+  <h3>Offline support</h3>
+  <p>Installable as a home-screen app (and as a native mobile app); previously viewed pages and data remain readable with no connection, while actions that write to the server are clearly flagged as needing one.</p>
+
+  <h2><span class="num">5</span>Booking status glossary</h2>
+  <table>
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td><span class="badge badge-pending">Pending</span></td><td>Awaiting a campus Admin's decision &mdash; always a 3rd-or-later same-day booking, with a reason attached.</td></tr>
+    <tr><td><span class="badge badge-approved">Approved</span></td><td>Confirmed automatically by the system, or by an Admin after review.</td></tr>
+    <tr><td><span class="badge badge-rejected">Rejected</span></td><td>Declined by an Admin, with a reason recorded for the CR.</td></tr>
+    <tr><td><span class="badge badge-cancelled">Cancelled</span></td><td>Withdrawn by the CR themself while still Pending.</td></tr>
+  </table>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2><span class="num">6</span>Roles &amp; permissions summary</h2>
+  <table>
+    <tr><th>Capability</th><th>CR</th><th>Admin</th><th>Super Admin</th></tr>
+    <tr><td>Book a venue on their own campus</td><td>Yes</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Approve / reject bookings</td><td>&mdash;</td><td>Own campus</td><td>Any campus</td></tr>
+    <tr><td>Manage venues &amp; timetable</td><td>&mdash;</td><td>Own campus</td><td>Any campus</td></tr>
+    <tr><td>Manage CRs</td><td>&mdash;</td><td>Own campus</td><td>Any campus</td></tr>
+    <tr><td>Manage Admin accounts</td><td>&mdash;</td><td>&mdash;</td><td>Yes*</td></tr>
+    <tr><td>Post / view campus announcements</td><td>Receives only</td><td>Own campus</td><td>Any campus</td></tr>
+    <tr><td>Change system-wide branding</td><td>&mdash;</td><td>&mdash;</td><td>Yes</td></tr>
+    <tr><td>Apply database updates</td><td>&mdash;</td><td>&mdash;</td><td>Yes</td></tr>
+  </table>
+  <p class="small">*Except the Main Super Admin, protected from edits, demotion, and removal by anyone but themself.</p>
+
+  <h2><span class="num">7</span>Availability &amp; access</h2>
+  <p>The application is reachable as a standard web page and can additionally be installed to a phone's home screen as a Progressive Web App, or used through a dedicated native mobile app. Once installed and opened online at least once, previously viewed pages and data remain available with no connection; the interface indicates offline status plainly rather than allowing an action to fail silently. All interface text is presented in English across both the Class Representative and Administrator experiences.</p>
+</div>
+
+<!-- ============ PAGE 5 (NEW) ============ -->
+<div class="page">
+  <h2><span class="num">8</span>Data model (ER diagram)</h2>
+  <p>The core entities and how they relate. Every foreign key that can be left empty (e.g. a Notification that isn't tied to a specific booking) is drawn as a dashed line; every table also carries standard <code>created_at</code>/<code>updated_at</code> timestamps, omitted below for clarity.</p>
+  <img class="diagram" src="{{ER_DIAGRAM}}" alt="Entity relationship diagram">
+  <p class="diagram-caption">Figure 1 &mdash; Entity Relationship Diagram</p>
+</div>
+
+<!-- ============ PAGE 6 (NEW) ============ -->
+<div class="page">
+  <h2><span class="num">9</span>Use case diagram</h2>
+  <p>What each account role can actually do. A Super Admin's capabilities are a strict superset of a regular Admin's (shown as the "extends" relationship) &mdash; anything an Admin can do, a Super Admin can also do, across every campus rather than just their own.</p>
+  <img class="diagram" src="{{USE_CASE_DIAGRAM}}" alt="Use case diagram">
+  <p class="diagram-caption">Figure 2 &mdash; Use Case Diagram</p>
+</div>
+
+<!-- ============ PAGE 7 ============ -->
+<div class="page">
+  <h2><span class="num">10</span>Related documents</h2>
+  <ul>
+    <li><b>User Manual</b> &mdash; step-by-step instructions for Class Representatives: registering, booking a venue, tracking bookings, using notifications, and installing the app.</li>
+    <li><b>Admin Manual</b> &mdash; step-by-step instructions for Administrators and Super Admins: venues, timetable, bookings, CRs, other Admins, notifications, announcements, and system settings.</li>
+  </ul>
+</div>
+
+</body>
+</html>

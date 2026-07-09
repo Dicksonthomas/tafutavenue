@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 880" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="one" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <line x1="4" y1="0" x2="4" y2="10" stroke="#64748b" stroke-width="1.4"/>
+    </marker>
+  </defs>
+
+  <style>
+    .ebox { fill: #ffffff; stroke: #002d62; stroke-width: 1.6; rx: 6; }
+    .ehead { fill: #002d62; }
+    .etitle { fill: #ffffff; font-size: 15px; font-weight: 700; }
+    .efield { fill: #334155; font-size: 12px; }
+    .epk { fill: #da4e1f; font-size: 12px; font-weight: 700; }
+    .rel { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    .rel-dashed { stroke: #94a3b8; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .lbl { fill: #64748b; font-size: 11px; font-weight: 700; }
+  </style>
+
+  <!-- ================= ENTITY BOXES ================= -->
+
+  <!-- User -->
+  <g transform="translate(30,30)">
+    <rect class="ebox" width="230" height="150"/>
+    <rect class="ehead" width="230" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="230" height="18"/>
+    <text x="12" y="19" class="etitle">User</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">name, email, password</text>
+    <text x="12" y="84" class="efield">role (cr | admin)</text>
+    <text x="12" y="102" class="efield">campus, faculty, level</text>
+    <text x="12" y="120" class="efield">is_super_admin, is_active</text>
+    <text x="12" y="138" class="efield">preferred_color</text>
+  </g>
+
+  <!-- Venue -->
+  <g transform="translate(340,30)">
+    <rect class="ebox" width="220" height="132"/>
+    <rect class="ehead" width="220" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="220" height="18"/>
+    <text x="12" y="19" class="etitle">Venue</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">name, code, building</text>
+    <text x="12" y="84" class="efield">campus, capacity, type</text>
+    <text x="12" y="102" class="efield">status, blocked_purposes</text>
+    <text x="12" y="120" class="efield">restricted_levels/dept.</text>
+  </g>
+
+  <!-- Semester -->
+  <g transform="translate(640,30)">
+    <rect class="ebox" width="200" height="96"/>
+    <rect class="ehead" width="200" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="200" height="18"/>
+    <text x="12" y="19" class="etitle">Semester</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">name, academic_year</text>
+    <text x="12" y="84" class="efield">is_active</text>
+  </g>
+
+  <!-- AppSetting -->
+  <g transform="translate(920,30)">
+    <rect class="ebox" width="230" height="96" stroke-dasharray="4 3"/>
+    <rect class="ehead" width="230" height="28" rx="6" opacity="0.55"/>
+    <rect class="ehead" y="10" width="230" height="18" opacity="0.55"/>
+    <text x="12" y="19" class="etitle">AppSetting</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">colors, logo, app_name</text>
+    <text x="12" y="84" class="efield">support_phone, footer</text>
+  </g>
+  <text x="920" y="146" class="lbl" font-size="10" fill="#94a3b8">singleton config — no relations</text>
+
+  <!-- Booking -->
+  <g transform="translate(300,270)">
+    <rect class="ebox" width="260" height="186"/>
+    <rect class="ehead" width="260" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="260" height="18"/>
+    <text x="12" y="19" class="etitle">Booking</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">FK user_id -&gt; User</text>
+    <text x="12" y="84" class="efield">FK venue_id -&gt; Venue</text>
+    <text x="12" y="102" class="efield">FK semester_id -&gt; Semester</text>
+    <text x="12" y="120" class="efield">FK approved_by -&gt; User</text>
+    <text x="12" y="138" class="efield">booking_date, start/end_time</text>
+    <text x="12" y="156" class="efield">purpose, status, signature</text>
+    <text x="12" y="174" class="efield">rejection_reason</text>
+  </g>
+
+  <!-- TimetableSlot -->
+  <g transform="translate(620,270)">
+    <rect class="ebox" width="230" height="132"/>
+    <rect class="ehead" width="230" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="230" height="18"/>
+    <text x="12" y="19" class="etitle">TimetableSlot</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">FK venue_id -&gt; Venue</text>
+    <text x="12" y="84" class="efield">FK semester_id -&gt; Semester</text>
+    <text x="12" y="102" class="efield">day_of_week, start/end_time</text>
+    <text x="12" y="120" class="efield">course_unit, lecturer, program</text>
+  </g>
+
+  <!-- ActivityLog -->
+  <g transform="translate(30,530)">
+    <rect class="ebox" width="230" height="114"/>
+    <rect class="ehead" width="230" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="230" height="18"/>
+    <text x="12" y="19" class="etitle">ActivityLog</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">FK user_id -&gt; User (nullable)</text>
+    <text x="12" y="84" class="efield">FK booking_id -&gt; Booking (nullable)</text>
+    <text x="12" y="102" class="efield">action, message</text>
+  </g>
+
+  <!-- Notification -->
+  <g transform="translate(330,530)">
+    <rect class="ebox" width="250" height="150"/>
+    <rect class="ehead" width="250" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="250" height="18"/>
+    <text x="12" y="19" class="etitle">Notification</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">FK user_id -&gt; User (recipient)</text>
+    <text x="12" y="84" class="efield">FK booking_id -&gt; Booking (nullable)</text>
+    <text x="12" y="102" class="efield">FK announcement_id -&gt; Announcement</text>
+    <text x="12" y="120" class="efield">type, title, body</text>
+    <text x="12" y="138" class="efield">read_at</text>
+  </g>
+
+  <!-- Announcement -->
+  <g transform="translate(640,530)">
+    <rect class="ebox" width="230" height="114"/>
+    <rect class="ehead" width="230" height="28" rx="6"/>
+    <rect class="ehead" y="10" width="230" height="18"/>
+    <text x="12" y="19" class="etitle">Announcement</text>
+    <text x="12" y="48" class="epk">PK id</text>
+    <text x="12" y="66" class="efield">FK admin_id -&gt; User (author)</text>
+    <text x="12" y="84" class="efield">title, body</text>
+  </g>
+
+  <!-- ================= RELATIONSHIPS ================= -->
+
+  <!-- User -> Booking (books) -->
+  <path class="rel" d="M145,180 C145,230 400,230 400,270" marker-start="url(#one)"/>
+  <text x="180" y="222" class="lbl">1</text>
+  <text x="380" y="262" class="lbl">*</text>
+  <text x="200" y="240" class="lbl" font-size="10">books</text>
+
+  <!-- User -> Booking (approves), dashed -->
+  <path class="rel-dashed" d="M230,180 C230,235 480,240 480,270"/>
+  <text x="470" y="262" class="lbl">*</text>
+  <text x="270" y="252" class="lbl" font-size="10">approves (approved_by)</text>
+
+  <!-- Venue -> Booking -->
+  <path class="rel" d="M420,162 L420,270" marker-start="url(#one)"/>
+  <text x="428" y="220" class="lbl">1</text>
+  <text x="428" y="262" class="lbl">*</text>
+
+  <!-- Semester -> Booking -->
+  <path class="rel" d="M700,126 C700,200 500,220 500,270" marker-start="url(#one)"/>
+  <text x="690" y="150" class="lbl">1</text>
+  <text x="490" y="262" class="lbl">*</text>
+
+  <!-- Venue -> TimetableSlot -->
+  <path class="rel" d="M540,110 C620,150 680,200 700,270" marker-start="url(#one)"/>
+  <text x="545" y="130" class="lbl">1</text>
+  <text x="690" y="262" class="lbl">*</text>
+
+  <!-- Semester -> TimetableSlot -->
+  <path class="rel" d="M760,126 L760,270" marker-start="url(#one)"/>
+  <text x="768" y="220" class="lbl">1</text>
+  <text x="768" y="262" class="lbl">*</text>
+
+  <!-- User -> ActivityLog -->
+  <path class="rel" d="M100,180 C60,300 100,420 100,530" marker-start="url(#one)"/>
+  <text x="70" y="300" class="lbl">1</text>
+  <text x="108" y="522" class="lbl">*</text>
+
+  <!-- Booking -> ActivityLog -->
+  <path class="rel-dashed" d="M300,400 C220,450 220,480 200,530"/>
+  <text x="205" y="522" class="lbl">*</text>
+
+  <!-- User -> Notification -->
+  <path class="rel" d="M170,180 C220,320 350,420 400,530" marker-start="url(#one)"/>
+  <text x="185" y="260" class="lbl">1</text>
+  <text x="390" y="522" class="lbl">*</text>
+
+  <!-- Booking -> Notification -->
+  <path class="rel-dashed" d="M420,456 L420,530"/>
+  <text x="428" y="522" class="lbl">*</text>
+
+  <!-- Announcement -> Notification -->
+  <path class="rel" d="M700,530 C620,590 600,600 580,595" marker-start="url(#one)"/>
+  <text x="640" y="580" class="lbl">1</text>
+  <text x="585" y="605" class="lbl">*</text>
+
+  <!-- User -> Announcement (author) -->
+  <path class="rel" d="M260,120 C500,180 780,320 755,530" marker-start="url(#one)"/>
+  <text x="270" y="132" class="lbl">1</text>
+  <text x="745" y="522" class="lbl">*</text>
+  <text x="480" y="215" class="lbl" font-size="10">authors (admin_id)</text>
+
+  <!-- ================= LEGEND ================= -->
+  <g transform="translate(30,700)">
+    <rect width="1140" height="70" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="16" y="24" font-size="11" font-weight="700" fill="#002d62">Legend</text>
+    <line x1="16" y1="40" x2="60" y2="40" class="rel" marker-start="url(#one)"/>
+    <text x="68" y="44" class="efield">solid line = required relationship (1 → *)</text>
+    <line x1="16" y1="58" x2="60" y2="58" class="rel-dashed"/>
+    <text x="68" y="62" class="efield">dashed line = optional relationship (nullable foreign key)</text>
+    <text x="560" y="44" class="efield">Every table also has created_at / updated_at timestamps (omitted above for clarity).</text>
+    <text x="560" y="62" class="efield">Notification.type: booking_approved | booking_rejected | booking_pending | announcement</text>
+  </g>
+</svg>
