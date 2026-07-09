@@ -31,11 +31,14 @@ class BookingController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $perPageInput = $request->input('per_page', 20);
+        $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
+
         $bookings = Booking::with(['venue', 'semester', 'approver'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('booking_date')
             ->orderByDesc('start_time')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json($bookings);
     }
