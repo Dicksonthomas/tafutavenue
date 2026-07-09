@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\BookingConfirmedMail;
 use App\Models\ActivityLog;
-use App\Models\AppSetting;
 use App\Models\Booking;
 use App\Models\Notification;
-use App\Models\TimetableSlot;
 use App\Models\User;
-use App\Models\Venue;
+use App\Services\BookingRuleChecker;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +23,8 @@ class BookingController extends Controller
      * beyond that they must give a reason and a campus Admin reviews it.
      */
     private const DAILY_AUTO_APPROVE_LIMIT = 2;
+
+    private const EDITABLE_STATUSES = ['pending', 'approved'];
 
     /**
      * Bookings belonging to the logged-in CR.
@@ -62,186 +62,47 @@ class BookingController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'venue_id' => ['required', 'exists:venues,id'],
-            'semester_id' => ['required', 'exists:semesters,id'],
-            'booking_date' => ['required', 'date', 'after_or_equal:today'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i'],
-            'purpose' => ['required', Rule::in(['study_unit', 'test', 'makeup_class', 'meeting', 'other'])],
-            'title' => ['nullable', 'string', 'max:255'],
-            'signature' => ['required', 'string'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
+        $data = $request->validate($this->validationRules());
 
-        $dayOfWeek = Carbon::parse($data['booking_date'])->format('l');
+        $result = (new BookingRuleChecker())->check($data, $request->user());
 
-        // "00:00" in the user's request means "until midnight" (end of day).
-        // We store it as "23:59" instead because all overlap comparisons in
-        // the system are for a single day's time range (they have no concept
-        // of crossing into the next day) - "00:00" would break those comparisons.
-        if ($data['end_time'] === '00:00') {
-            $data['end_time'] = '23:59';
+        if ($result instanceof JsonResponse) {
+            return $result;
         }
 
-        if ($data['end_time'] <= $data['start_time']) {
-            return response()->json(['message' => 'End time must be after start time.'], 422);
-        }
+        $venue = $result;
+        $needsReview = $this->needsReview($request->user(), $data, null);
 
-        // A "Test" is meant to be short - cap it at 1 hour so it doesn't tie
-        // up a venue as long as a full Study Unit session would.
-        if ($data['purpose'] === 'test') {
-            $durationMinutes = Carbon::parse($data['start_time'])->diffInMinutes(Carbon::parse($data['end_time']));
-
-            if ($durationMinutes > 60) {
-                return response()->json([
-                    'message' => 'A Test booking cannot be longer than 1 hour (e.g. 17:00-18:00). Please shorten the time.',
-                ], 422);
-            }
-        }
-
-        if ($data['purpose'] === 'study_unit') {
-            $configuredHours = AppSetting::current()->study_unit_hours[$dayOfWeek] ?? null;
-            $windowStart = $configuredHours['start'] ?? '19:00';
-            $windowEndRaw = $configuredHours['end'] ?? '00:00';
-            $windowEnd = $windowEndRaw === '00:00' ? '23:59' : $windowEndRaw;
-            $windowEndLabel = $windowEndRaw === '00:00' ? 'midnight' : $windowEndRaw;
-
-            if ($data['start_time'] < $windowStart || $data['start_time'] > $windowEnd) {
-                return response()->json([
-                    'message' => "Study Unit bookings on {$dayOfWeek} are only allowed from {$windowStart} until {$windowEndLabel}.",
-                ], 422);
-            }
-
-            // The start time alone being in-window isn't enough - the booking
-            // must also finish by the end of the window, or it would quietly
-            // run past the hours the Admin configured.
-            if ($data['end_time'] > $windowEnd) {
-                return response()->json([
-                    'message' => "Study Unit bookings on {$dayOfWeek} must end by {$windowEndLabel} - choose an earlier end time.",
-                ], 422);
-            }
-        }
-
-        $venue = Venue::findOrFail($data['venue_id']);
-
-        if ($venue->status !== 'available') {
-            return response()->json([
-                'message' => 'This venue is currently unavailable (maintenance/disabled).',
-            ], 422);
-        }
-
-        if (! $venue->allowsPurpose($data['purpose'])) {
-            return response()->json([
-                'message' => "Venue {$venue->name} is not allowed for ".str_replace('_', ' ', $data['purpose']).'.',
-            ], 422);
-        }
-
-        if (! $venue->allowsUser($request->user())) {
-            return response()->json([
-                'message' => "Venue {$venue->name} has special restrictions (campus/level/department) that you don't meet.",
-            ], 403);
-        }
-
-        $clashesWithTimetable = TimetableSlot::overlapping(
-            $data['venue_id'],
-            $dayOfWeek,
-            $data['start_time'],
-            $data['end_time']
-        )->where('semester_id', $data['semester_id'])->exists();
-
-        if ($clashesWithTimetable) {
-            return response()->json([
-                'message' => 'This time slot already has an official lecture (timetable) at this venue.',
-            ], 409);
-        }
-
-        $conflictingBooking = Booking::overlapping(
-            $data['venue_id'],
-            $data['booking_date'],
-            $data['start_time'],
-            $data['end_time']
-        )->with('user:id,name')->first();
-
-        if ($conflictingBooking) {
-            $conflictPurpose = str_replace('_', ' ', $conflictingBooking->purpose);
-            $conflictMessage = "{$venue->name} is currently booked by {$conflictingBooking->user->name} for a {$conflictPurpose} "
-                ."from {$conflictingBooking->start_time} until {$conflictingBooking->end_time} on "
-                .Carbon::parse($conflictingBooking->booking_date)->format('d/m/Y')
-                .". Please wait until then, or choose another time or venue.";
-
-            ActivityLog::record(
-                $request->user()->id,
-                'booking_conflict',
-                "{$request->user()->name} attempted to book {$venue->name} but it conflicted with a booking by {$conflictingBooking->user->name}.",
-                $conflictingBooking->id
-            );
-
-            return response()->json(['message' => $conflictMessage], 409);
-        }
-
-        // A CR can have up to DAILY_AUTO_APPROVE_LIMIT bookings auto-approved
-        // per calendar day; beyond that they must explain why, and the
-        // booking goes to their campus Admin for manual review instead of
-        // being auto-approved (same pending/approve flow as any other
-        // booking an Admin reviews).
-        $bookingsTodayCount = Booking::where('user_id', $request->user()->id)
-            ->whereDate('booking_date', $data['booking_date'])
-            ->whereIn('status', ['pending', 'approved'])
-            ->count();
-
-        $exceedsDailyLimit = $bookingsTodayCount >= self::DAILY_AUTO_APPROVE_LIMIT;
-
-        if ($exceedsDailyLimit && empty($data['reason'])) {
+        if ($needsReview && empty($data['reason'])) {
             throw ValidationException::withMessages([
-                'reason' => 'You have already booked '.self::DAILY_AUTO_APPROVE_LIMIT
-                    .' venue(s) today. Please explain why you need another one, so your campus Admin can review it.',
+                'reason' => $this->reasonPrompt($request->user(), $data),
             ]);
         }
 
         // No conflict was found (already checked above against the timetable
-        // and other bookings), so - unless the daily limit above was exceeded
-        // - the booking is approved immediately without waiting for an
-        // Admin, since the system itself has already verified it.
+        // and other bookings), so - unless it needs review above - the
+        // booking is approved immediately without waiting for an Admin,
+        // since the system itself has already verified it.
         $booking = Booking::create([
             ...$data,
             'user_id' => $request->user()->id,
-            'status' => $exceedsDailyLimit ? 'pending' : 'approved',
-            ...($exceedsDailyLimit ? [] : ['approved_at' => now(), 'signed_at' => now()]),
+            'status' => $needsReview ? 'pending' : 'approved',
+            ...($needsReview ? [] : ['approved_at' => now(), 'signed_at' => now()]),
         ]);
 
         $booking->load(['venue', 'user']);
 
-        if ($exceedsDailyLimit) {
+        if ($needsReview) {
             ActivityLog::record(
                 $request->user()->id,
                 'booking_pending_review',
-                "{$booking->user->name} requested an extra booking of {$booking->venue->name} on "
+                "{$booking->user->name} requested a booking of {$booking->venue->name} on "
                     .Carbon::parse($booking->booking_date)->format('d/m/Y')
-                    ." beyond the daily limit, pending Admin review. Reason: {$data['reason']}",
+                    ." that needs Admin review. Reason: {$data['reason']}",
                 $booking->id
             );
 
-            $campus = $request->user()->campus;
-            $adminIds = User::where('role', 'admin')
-                ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $campus))
-                ->pluck('id');
-
-            $now = now();
-            $rows = $adminIds->map(fn ($adminId) => [
-                'user_id' => $adminId,
-                'type' => 'booking_pending',
-                'title' => "{$booking->user->name} requested {$booking->venue->name}",
-                'body' => $data['reason'],
-                'booking_id' => $booking->id,
-                'read_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ])->all();
-
-            if ($rows !== []) {
-                Notification::insert($rows);
-            }
+            $this->notifyAdminsOfReview($request->user(), $booking, $data['reason']);
         } else {
             ActivityLog::record(
                 $request->user()->id,
@@ -255,6 +116,146 @@ class BookingController extends Controller
         }
 
         return response()->json($booking, 201);
+    }
+
+    /**
+     * Let a CR fix a booking they got wrong (date/time/venue/purpose) rather
+     * than cancel and start over. Only while it's still Pending or Approved
+     * (not yet Rejected/Cancelled) - runs through the exact same rules as
+     * creating a new booking, and can just as easily land back on Pending
+     * if the new time now needs Admin review.
+     */
+    public function update(Request $request, Booking $booking): JsonResponse
+    {
+        abort_unless($booking->user_id === $request->user()->id, 403, 'You do not have permission.');
+        abort_unless(
+            in_array($booking->status, self::EDITABLE_STATUSES, true),
+            422,
+            'This booking is already closed and can no longer be edited - make a new booking instead.'
+        );
+
+        $data = $request->validate($this->validationRules());
+
+        $result = (new BookingRuleChecker())->check($data, $request->user(), $booking->id);
+
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        $needsReview = $this->needsReview($request->user(), $data, $booking->id);
+
+        if ($needsReview && empty($data['reason'])) {
+            throw ValidationException::withMessages([
+                'reason' => $this->reasonPrompt($request->user(), $data),
+            ]);
+        }
+
+        $wasApproved = $booking->status === 'approved';
+
+        $booking->update([
+            ...$data,
+            'status' => $needsReview ? 'pending' : 'approved',
+            'approved_by' => null,
+            'rejection_reason' => null,
+            ...($needsReview ? ['approved_at' => null, 'signed_at' => null] : ['approved_at' => now(), 'signed_at' => now()]),
+        ]);
+
+        $booking->load(['venue', 'user']);
+
+        ActivityLog::record(
+            $request->user()->id,
+            'booking_edited',
+            "{$booking->user->name} edited their booking of {$booking->venue->name} to "
+                .Carbon::parse($booking->booking_date)->format('d/m/Y')
+                ." {$booking->start_time}-{$booking->end_time}"
+                .($needsReview ? ' (now needs Admin review).' : '.'),
+            $booking->id
+        );
+
+        if ($needsReview) {
+            $this->notifyAdminsOfReview($request->user(), $booking, $data['reason'] ?? '');
+        } elseif ($wasApproved) {
+            // Was already approved and still is after the edit (e.g. just
+            // moved to a different still-conflict-free time) - re-confirm.
+            Mail::to($booking->user->email)->queue(new BookingConfirmedMail($booking));
+        }
+
+        return response()->json($booking);
+    }
+
+    /**
+     * Whether this booking needs a written reason and a campus Admin's
+     * review before it can be approved - either because it's beyond the
+     * CR's free daily allowance, or (for Study Unit specifically) beyond
+     * the single-booking duration allowance.
+     */
+    private function needsReview(User $user, array $data, ?int $excludingBookingId): bool
+    {
+        $bookingsTodayCount = Booking::where('user_id', $user->id)
+            ->whereDate('booking_date', $data['booking_date'])
+            ->whereIn('status', ['pending', 'approved'])
+            ->when($excludingBookingId, fn ($q) => $q->where('id', '!=', $excludingBookingId))
+            ->count();
+
+        $exceedsDailyLimit = $bookingsTodayCount >= self::DAILY_AUTO_APPROVE_LIMIT;
+
+        $exceedsStudyUnitDuration = $data['purpose'] === 'study_unit'
+            && Carbon::parse($data['start_time'])->diffInMinutes(Carbon::parse($data['end_time'])) > BookingRuleChecker::STUDY_UNIT_MAX_MINUTES;
+
+        return $exceedsDailyLimit || $exceedsStudyUnitDuration;
+    }
+
+    private function reasonPrompt(User $user, array $data): string
+    {
+        $exceedsStudyUnitDuration = $data['purpose'] === 'study_unit'
+            && Carbon::parse($data['start_time'])->diffInMinutes(Carbon::parse($data['end_time'])) > BookingRuleChecker::STUDY_UNIT_MAX_MINUTES;
+
+        if ($exceedsStudyUnitDuration) {
+            return 'Study Unit bookings longer than '.(BookingRuleChecker::STUDY_UNIT_MAX_MINUTES / 60)
+                .' hours need a reason, so your campus Admin can review it.';
+        }
+
+        return 'You have already booked '.self::DAILY_AUTO_APPROVE_LIMIT
+            .' venue(s) today. Please explain why you need another one, so your campus Admin can review it.';
+    }
+
+    private function notifyAdminsOfReview(User $requester, Booking $booking, string $reason): void
+    {
+        $campus = $requester->campus;
+        $adminIds = User::where('role', 'admin')
+            ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $campus))
+            ->pluck('id');
+
+        $now = now();
+        $rows = $adminIds->map(fn ($adminId) => [
+            'user_id' => $adminId,
+            'type' => 'booking_pending',
+            'title' => "{$booking->user->name} requested {$booking->venue->name}",
+            'body' => $reason,
+            'booking_id' => $booking->id,
+            'read_at' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        if ($rows !== []) {
+            Notification::insert($rows);
+        }
+    }
+
+    private function validationRules(): array
+    {
+        return [
+            'venue_id' => ['required', 'exists:venues,id'],
+            'semester_id' => ['required', 'exists:semesters,id'],
+            'booking_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'purpose' => ['required', Rule::in(['study_unit', 'test', 'makeup_class', 'meeting', 'other'])],
+            'title' => ['nullable', 'string', 'max:255'],
+            'signature' => ['required', 'string'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ];
     }
 
     /**

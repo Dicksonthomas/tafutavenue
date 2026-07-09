@@ -22,8 +22,10 @@ class Semester extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
+            // Explicit Y-m-d, not the bare 'date' cast - see Booking::casts()
+            // for why the bare cast quietly shifts the date back a day.
+            'start_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
             'is_active' => 'boolean',
         ];
     }

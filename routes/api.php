@@ -52,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/bookings/{booking}', [BookingController::class, 'show']);
     Route::post('/bookings', [BookingController::class, 'store']);
+    Route::put('/bookings/{booking}', [BookingController::class, 'update']);
     Route::post('/bookings/{booking}/sign', [BookingController::class, 'sign']);
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel']);
 
@@ -83,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/timetable/import-from-link', [TimetableImportController::class, 'importFromLink']);
 
         Route::get('/bookings', [BookingAdminController::class, 'index']);
+        Route::put('/bookings/{booking}', [BookingAdminController::class, 'update']);
         Route::post('/bookings/{booking}/approve', [BookingAdminController::class, 'approve']);
         Route::post('/bookings/{booking}/reject', [BookingAdminController::class, 'reject']);
         Route::delete('/bookings/{booking}', [BookingAdminController::class, 'destroy']);

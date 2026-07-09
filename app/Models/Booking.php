@@ -32,7 +32,11 @@ class Booking extends Model
     protected function casts(): array
     {
         return [
-            'booking_date' => 'date',
+            // Explicit Y-m-d format, not the bare 'date' cast - the bare cast
+            // serializes to a full ISO8601 datetime converted to UTC, which
+            // silently shifts the date back a day once the app timezone
+            // (Africa/Dar_es_Salaam, UTC+3) is anything other than UTC.
+            'booking_date' => 'date:Y-m-d',
             'signed_at' => 'datetime',
             'approved_at' => 'datetime',
         ];
@@ -65,15 +69,17 @@ class Booking extends Model
     /**
      * Filter bookings that clash with the given time range (start_time -
      * end_time) for a venue and date. Rejected/cancelled bookings don't
-     * block others.
+     * block others. $excludingId lets an edit re-check for conflicts
+     * without the booking clashing with its own, not-yet-saved, old self.
      */
-    public function scopeOverlapping(Builder $query, int $venueId, string $date, string $start, string $end): Builder
+    public function scopeOverlapping(Builder $query, int $venueId, string $date, string $start, string $end, ?int $excludingId = null): Builder
     {
         return $query
             ->where('venue_id', $venueId)
             ->whereDate('booking_date', $date)
             ->whereIn('status', ['pending', 'approved'])
             ->where('start_time', '<', $end)
-            ->where('end_time', '>', $start);
+            ->where('end_time', '>', $start)
+            ->when($excludingId, fn ($q) => $q->where('id', '!=', $excludingId));
     }
 }
