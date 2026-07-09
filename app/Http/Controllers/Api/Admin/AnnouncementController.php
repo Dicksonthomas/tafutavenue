@@ -16,6 +16,36 @@ class AnnouncementController extends Controller
     private const VALID_LEVELS = ['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'];
 
     /**
+     * Announcements the Admin can manage - their own, or every one if
+     * they're a Super Admin (same oversight pattern as Admin management).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $perPageInput = $request->input('per_page', 20);
+        $perPage = ($perPageInput === 'all' || ! is_numeric($perPageInput)) ? 100000 : max(1, (int) $perPageInput);
+
+        $announcements = Announcement::with('admin:id,name')
+            ->when(! $request->user()->isSuperAdmin(), fn ($q) => $q->where('admin_id', $request->user()->id))
+            ->withCount([
+                'notifications',
+                'notifications as read_count' => fn ($q) => $q->whereNotNull('read_at'),
+            ])
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+
+        return response()->json($announcements);
+    }
+
+    private function assertManageable(Request $request, Announcement $announcement): void
+    {
+        abort_unless(
+            $announcement->admin_id === $request->user()->id || $request->user()->isSuperAdmin(),
+            403,
+            'You can only manage your own announcements.'
+        );
+    }
+
+    /**
      * Post an announcement that fans out as a Notification to a chosen
      * audience of CRs. A regular Admin is always locked to their own campus;
      * a Super Admin may pick a campus (or leave it blank for everyone
@@ -77,5 +107,57 @@ class AnnouncementController extends Controller
         );
 
         return response()->json(['announcement' => $announcement, 'recipients' => $recipientIds->count()], 201);
+    }
+
+    /**
+     * Edit an already-sent announcement's title/body - also updates every
+     * Notification row it already fanned out to, so CRs who already have it
+     * in their list see the corrected text instead of the original.
+     */
+    public function update(Request $request, Announcement $announcement): JsonResponse
+    {
+        $this->assertManageable($request, $announcement);
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $announcement->update($data);
+
+        $announcement->notifications()->update([
+            'title' => $data['title'],
+            'body' => $data['body'],
+        ]);
+
+        ActivityLog::record(
+            $request->user()->id,
+            'announcement_updated',
+            "{$request->user()->name} edited the announcement \"{$announcement->title}\"."
+        );
+
+        return response()->json($announcement);
+    }
+
+    /**
+     * Delete an announcement and every Notification it fanned out to - this
+     * is also how it's "hidden" from CRs, since deleting the Notification
+     * rows removes it from their list immediately.
+     */
+    public function destroy(Request $request, Announcement $announcement): JsonResponse
+    {
+        $this->assertManageable($request, $announcement);
+
+        $title = $announcement->title;
+        $announcement->notifications()->delete();
+        $announcement->delete();
+
+        ActivityLog::record(
+            $request->user()->id,
+            'announcement_deleted',
+            "{$request->user()->name} deleted the announcement \"{$title}\"."
+        );
+
+        return response()->json(['message' => 'Announcement deleted.']);
     }
 }

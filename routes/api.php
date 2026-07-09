@@ -114,6 +114,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/logs/{log}', [ActivityLogController::class, 'destroy']);
         Route::delete('/logs', [ActivityLogController::class, 'destroyAll']);
 
+        Route::get('/announcements', [AnnouncementController::class, 'index']);
         Route::post('/announcements', [AnnouncementController::class, 'store']);
+        Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update']);
+        Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy']);
     });
 });
