@@ -6,11 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\Notification;
-use App\Services\BookingRuleChecker;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class BookingAdminController extends Controller
 {
@@ -111,65 +108,6 @@ class BookingAdminController extends Controller
             'booking_rejected',
             "Your booking for {$booking->venue->name} was rejected",
             $data['rejection_reason'],
-            $booking->id
-        );
-
-        return response()->json($booking);
-    }
-
-    /**
-     * Let an Admin correct a booking's details (venue/date/time/purpose) on
-     * a CR's behalf - e.g. the CR picked the wrong date and can't reach the
-     * system, or the Admin spots a clash before it's approved. Runs through
-     * the same conflict/timetable/duration rules as a CR creating or editing
-     * their own booking, but restriction checks (campus/level/department)
-     * are evaluated against the booking's OWNER, not the Admin doing the
-     * editing. Deliberately does not touch status/approval fields - if the
-     * Admin also wants to approve/reject, they use the separate buttons for
-     * that, so an edit alone never implies a decision either way.
-     */
-    public function update(Request $request, Booking $booking): JsonResponse
-    {
-        $this->assertBookingCampusAllowed($request, $booking);
-        abort_unless(
-            in_array($booking->status, ['pending', 'approved'], true),
-            422,
-            'This booking is already closed and can no longer be edited.'
-        );
-
-        $data = $request->validate([
-            'venue_id' => ['required', 'exists:venues,id'],
-            'semester_id' => ['required', 'exists:semesters,id'],
-            'booking_date' => ['required', 'date'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i'],
-            'purpose' => ['required', Rule::in(['study_unit', 'test', 'makeup_class', 'meeting', 'other'])],
-            'title' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $result = (new BookingRuleChecker())->check($data, $request->user(), $booking->id, $booking->user);
-
-        if ($result instanceof JsonResponse) {
-            return $result;
-        }
-
-        $booking->update($data);
-        $booking->load(['venue', 'user']);
-
-        ActivityLog::record(
-            $request->user()->id,
-            'booking_edited',
-            "Admin {$request->user()->name} edited the booking of {$booking->venue->name} for {$booking->user->name} to "
-                .Carbon::parse($booking->booking_date)->format('d/m/Y')
-                ." {$booking->start_time}-{$booking->end_time}.",
-            $booking->id
-        );
-
-        Notification::send(
-            $booking->user_id,
-            'booking_edited',
-            "Your booking for {$booking->venue->name} was updated by an Admin",
-            'New time: '.Carbon::parse($booking->booking_date)->format('d/m/Y')." {$booking->start_time}-{$booking->end_time}",
             $booking->id
         );
 

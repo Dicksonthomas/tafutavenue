@@ -13,12 +13,11 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * The rules shared by creating a booking (BookingController::store) and
- * editing one (BookingController::update, BookingAdminController::update):
- * the "00:00 means midnight" normalization, duration caps, the Study Unit
- * window, venue status/purpose/user restrictions, and clashes against the
- * timetable or another booking. Kept as one class so a CR's and an Admin's
- * edit endpoints can't quietly drift out of sync with each other or with
- * booking creation.
+ * editing one (BookingController::update): the "00:00 means midnight"
+ * normalization, duration caps, the Study Unit window, venue
+ * status/purpose/user restrictions, and clashes against the timetable or
+ * another booking. Kept as one class so those two entry points can't
+ * quietly drift out of sync with each other.
  */
 class BookingRuleChecker
 {
@@ -27,23 +26,15 @@ class BookingRuleChecker
     /**
      * @param  array  $data  Validated request data - mutated in place (the
      *                       "00:00" -> "23:59" end_time normalization).
-     * @param  User  $actingUser  Whoever is making the request - used for
-     *                            conflict-log attribution.
-     * @param  User|null  $restrictionUser  Whose campus/level/department the
-     *                                      venue's access restrictions are
-     *                                      checked against. Defaults to
-     *                                      $actingUser (the CR booking for
-     *                                      themself). When an Admin edits a
-     *                                      CR's booking on their behalf, pass
-     *                                      the CR here instead - the venue's
-     *                                      restrictions describe who the
-     *                                      booking is FOR, not who's typing.
+     * @param  User  $actingUser  The CR booking/editing for themself - used
+     *                            both for conflict-log attribution and for
+     *                            checking the venue's access restrictions
+     *                            (campus/level/department).
      * @return Venue|JsonResponse The resolved Venue on success, or the error
      *                            response to return as-is on failure.
      */
-    public function check(array &$data, User $actingUser, ?int $excludingBookingId = null, ?User $restrictionUser = null): Venue|JsonResponse
+    public function check(array &$data, User $actingUser, ?int $excludingBookingId = null): Venue|JsonResponse
     {
-        $restrictionUser ??= $actingUser;
         $dayOfWeek = Carbon::parse($data['booking_date'])->format('l');
 
         if ($data['end_time'] === '00:00') {
@@ -98,7 +89,7 @@ class BookingRuleChecker
             ], 422);
         }
 
-        if (! $venue->allowsUser($restrictionUser)) {
+        if (! $venue->allowsUser($actingUser)) {
             return response()->json([
                 'message' => "Venue {$venue->name} has special restrictions (campus/level/department) that you don't meet.",
             ], 403);

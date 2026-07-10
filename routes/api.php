@@ -84,7 +84,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/timetable/import-from-link', [TimetableImportController::class, 'importFromLink']);
 
         Route::get('/bookings', [BookingAdminController::class, 'index']);
-        Route::put('/bookings/{booking}', [BookingAdminController::class, 'update']);
         Route::post('/bookings/{booking}/approve', [BookingAdminController::class, 'approve']);
         Route::post('/bookings/{booking}/reject', [BookingAdminController::class, 'reject']);
         Route::delete('/bookings/{booking}', [BookingAdminController::class, 'destroy']);
