@@ -14,8 +14,15 @@ class BookingConfirmedMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    /**
+     * @param  bool  $approvedByAdmin  False (default) for the system's own
+     *                                 auto-approval (no conflict found), true
+     *                                 when an Admin manually approved it -
+     *                                 the email wording differs accordingly.
+     */
     public function __construct(
         public Booking $booking,
+        public bool $approvedByAdmin = false,
     ) {}
 
     public function envelope(): Envelope
@@ -29,6 +36,7 @@ class BookingConfirmedMail extends Mailable implements ShouldQueue
     {
         return new Content(
             view: 'emails.booking-confirmed',
+            with: ['approvedByAdmin' => $this->approvedByAdmin],
         );
     }
 

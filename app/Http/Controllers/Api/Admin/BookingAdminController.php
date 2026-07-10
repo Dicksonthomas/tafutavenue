@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BookingConfirmedMail;
 use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class BookingAdminController extends Controller
 {
@@ -76,6 +78,11 @@ class BookingAdminController extends Controller
             null,
             $booking->id
         );
+
+        // Sent synchronously (not ->queue()) so it doesn't depend on a queue
+        // worker running - an Admin approving a booking is a one-off action,
+        // not high-volume, so the extra request time is an acceptable trade.
+        Mail::to($booking->user->email)->send(new BookingConfirmedMail($booking, approvedByAdmin: true));
 
         return response()->json($booking);
     }

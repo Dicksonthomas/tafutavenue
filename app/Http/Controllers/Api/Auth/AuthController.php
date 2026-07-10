@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Controller;
 use App\Mail\CrCredentialsMail;
 use App\Models\ActivityLog;
+use App\Models\CustomDepartment;
 use App\Models\User;
 use App\Services\CrEmailGenerator;
 use Illuminate\Http\JsonResponse;
@@ -50,6 +52,18 @@ class AuthController extends Controller
 
         $email = $this->resolveUniqueEmail($generated['email']);
         $plainPassword = Str::password(10, symbols: false);
+
+        // If this CR typed a department that isn't already known for their
+        // faculty (hardcoded or previously custom-added), save it so the
+        // next registrant from that faculty/department sees it in the list
+        // instead of having to type it too - see
+        // ReferenceDataController::departments().
+        $department = trim($data['department']);
+        $knownDepartments = ReferenceDataController::knownDepartmentNamesFor($data['faculty']);
+
+        if (! in_array(mb_strtolower($department), $knownDepartments, true)) {
+            CustomDepartment::firstOrCreate(['faculty' => $data['faculty'], 'name' => $department]);
+        }
 
         $user = User::create([
             ...$data,

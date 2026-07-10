@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomDepartment;
 use App\Models\TimetableSlot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,9 +53,39 @@ class ReferenceDataController extends Controller
         return response()->json(self::FACULTIES);
     }
 
+    /**
+     * The hardcoded list per faculty, plus any departments a CR has typed
+     * during registration that weren't already known - see
+     * AuthController::register(), which is what actually creates these rows.
+     */
     public function departments(): JsonResponse
     {
-        return response()->json(self::DEPARTMENTS_BY_FACULTY);
+        $merged = self::DEPARTMENTS_BY_FACULTY;
+
+        foreach (CustomDepartment::all()->groupBy('faculty') as $faculty => $rows) {
+            $merged[$faculty] = collect($merged[$faculty] ?? [])
+                ->merge($rows->pluck('name'))
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+        }
+
+        return response()->json($merged);
+    }
+
+    /**
+     * All departments known for a faculty (hardcoded + custom-added),
+     * lower-cased for case-insensitive "is this actually new" comparisons.
+     * Used by AuthController::register() to decide whether to persist a
+     * newly-typed department.
+     */
+    public static function knownDepartmentNamesFor(string $faculty): array
+    {
+        $known = collect(self::DEPARTMENTS_BY_FACULTY[$faculty] ?? [])
+            ->merge(CustomDepartment::where('faculty', $faculty)->pluck('name'));
+
+        return $known->map(fn ($name) => mb_strtolower(trim($name)))->all();
     }
 
     public function levelYears(): JsonResponse

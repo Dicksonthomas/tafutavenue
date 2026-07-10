@@ -10,7 +10,11 @@
         </div>
         <div style="padding:24px;color:#1e293b;">
             <p>Hello {{ $booking->user->name }},</p>
-            <p>Your booking has been confirmed automatically (auto-approved) - the venue is already yours for the requested time. Booking details:</p>
+            @if($approvedByAdmin ?? false)
+                <p>Your campus Admin has approved your booking - the venue is now yours for the requested time. Booking details:</p>
+            @else
+                <p>Your booking has been confirmed automatically (auto-approved) - the venue is already yours for the requested time. Booking details:</p>
+            @endif
 
             <table style="width:100%;border-collapse:collapse;margin:16px 0;">
                 <tr>
