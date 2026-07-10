@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\Semester;
+use App\Models\TimetableSlot;
 use App\Models\User;
 use App\Models\Venue;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -83,6 +85,47 @@ class ReportController extends Controller
             ->groupBy('campus')
             ->pluck('total', 'campus');
 
+        // "Free right now" (today) - same available-and-not-busy logic as
+        // VenueController::todayOverview() (the CR-facing equivalent), but
+        // broken down per campus and campus-scoped the same way as the rest
+        // of this summary: a regular Admin only sees their own campus, a
+        // Super Admin (campusScope() === null) sees every campus.
+        $today = Carbon::today();
+        $dayOfWeek = $today->format('l');
+        $activeSemester = Semester::where('is_active', true)->first();
+        $availableVenueQuery = (clone $venueQuery)->where('status', 'available');
+
+        $availableByCampus = (clone $availableVenueQuery)
+            ->select('campus', DB::raw('count(*) as total'))
+            ->groupBy('campus')
+            ->pluck('total', 'campus');
+
+        $busyVenueIds = collect();
+
+        if ($activeSemester) {
+            $busyVenueIds = $busyVenueIds->concat(
+                TimetableSlot::where('semester_id', $activeSemester->id)
+                    ->where('day_of_week', $dayOfWeek)
+                    ->pluck('venue_id')
+            );
+        }
+
+        $busyVenueIds = $busyVenueIds->concat(
+            Booking::whereDate('booking_date', $today)
+                ->whereIn('status', ['pending', 'approved'])
+                ->pluck('venue_id')
+        )->unique();
+
+        $busyByCampus = (clone $availableVenueQuery)
+            ->whereIn('id', $busyVenueIds)
+            ->select('campus', DB::raw('count(*) as total'))
+            ->groupBy('campus')
+            ->pluck('total', 'campus');
+
+        $freeVenuesByCampus = $availableByCampus->mapWithKeys(fn ($total, $campus) => [
+            $campus => max(0, $total - ($busyByCampus[$campus] ?? 0)),
+        ]);
+
         return response()->json([
             'total_bookings' => (clone $query)->count(),
             'by_status' => $byStatus,
@@ -94,6 +137,9 @@ class ReportController extends Controller
             'crs_by_campus' => $crsByCampus,
             'male_crs' => (clone $crQuery)->where('sex', 'male')->count(),
             'female_crs' => (clone $crQuery)->where('sex', 'female')->count(),
+            'free_venues_today' => $freeVenuesByCampus->sum(),
+            'free_venues_by_campus' => $freeVenuesByCampus,
+            'day_of_week' => $dayOfWeek,
         ]);
     }
 
