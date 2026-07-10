@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Controller;
-use App\Mail\CrCredentialsMail;
 use App\Models\ActivityLog;
 use App\Models\CustomDepartment;
 use App\Models\User;
@@ -13,8 +12,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -29,7 +26,9 @@ class AuthController extends Controller
      * The CR's email is not chosen by them - it is generated automatically
      * from Fullname + Reg No (e.g. "Dickson Musa Thomas" + "14322055/T.25"
      * -> dickson.thomas25@mustudent.ac.tz). The password is also generated
-     * automatically and sent to that email - it never appears in the response.
+     * automatically and returned directly in this response (not emailed -
+     * registration deliberately has no mail-server dependency, so it can't
+     * be slowed down or blocked by one).
      */
     public function register(Request $request): JsonResponse
     {
@@ -73,20 +72,13 @@ class AuthController extends Controller
             'role' => 'cr',
         ]);
 
-        dispatch(function () use ($user, $plainPassword) {
-            try {
-                Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
-            } catch (\Throwable $e) {
-                Log::error("Failed to email registration credentials to {$user->email}: ".$e->getMessage());
-            }
-        })->afterResponse();
-
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         return response()->json([
             'user' => $user,
             'token' => $token,
-            'message' => "Account created. Password has been sent to email: {$user->email}",
+            'password' => $plainPassword,
+            'message' => 'Account created. Save your password below - you will need it to sign in again later.',
         ], 201);
     }
 
