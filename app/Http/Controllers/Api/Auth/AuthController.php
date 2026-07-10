@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -73,7 +74,11 @@ class AuthController extends Controller
         ]);
 
         dispatch(function () use ($user, $plainPassword) {
-            Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+            try {
+                Mail::to($user->email)->send(new CrCredentialsMail($user, $plainPassword));
+            } catch (\Throwable $e) {
+                Log::error("Failed to email registration credentials to {$user->email}: ".$e->getMessage());
+            }
         })->afterResponse();
 
         $token = $user->createToken('mobile-app')->plainTextToken;

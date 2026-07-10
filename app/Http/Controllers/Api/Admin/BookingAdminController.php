@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class BookingAdminController extends Controller
@@ -82,7 +83,14 @@ class BookingAdminController extends Controller
         // Sent synchronously (not ->queue()) so it doesn't depend on a queue
         // worker running - an Admin approving a booking is a one-off action,
         // not high-volume, so the extra request time is an acceptable trade.
-        Mail::to($booking->user->email)->send(new BookingConfirmedMail($booking, approvedByAdmin: true));
+        // The booking is already approved above regardless of what happens
+        // here, so a mail-server hiccup must never turn into a 500 that
+        // makes the Admin think their approval itself failed.
+        try {
+            Mail::to($booking->user->email)->send(new BookingConfirmedMail($booking, approvedByAdmin: true));
+        } catch (\Throwable $e) {
+            Log::error("Failed to email booking approval to {$booking->user->email}: ".$e->getMessage());
+        }
 
         return response()->json($booking);
     }

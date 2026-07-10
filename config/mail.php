@@ -45,7 +45,12 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            // A blocked/unreachable SMTP host (e.g. an IP-restricted relay
+            // silently dropping the connection) can otherwise hang for the
+            // OS's default socket timeout - 60s+ on some hosts - before
+            // failing, dragging out whatever request triggered the email
+            // (e.g. registration) right along with it. Fail fast instead.
+            'timeout' => env('MAIL_TIMEOUT', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
