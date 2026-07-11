@@ -16,10 +16,11 @@ class AppSetting extends Model
         'login_background_color',
         'study_unit_hours',
         'cr_registration_closed_campuses',
+        'staff_registration_windows',
         'marquee_enabled',
         'marquee_until',
-        'staff_registration_open_from',
-        'staff_registration_open_until',
+        'maintenance_mode',
+        'maintenance_until',
     ];
 
     protected $attributes = [
@@ -32,27 +33,36 @@ class AppSetting extends Model
         return [
             'study_unit_hours' => 'array',
             'cr_registration_closed_campuses' => 'array',
+            'staff_registration_windows' => 'array',
             'marquee_enabled' => 'boolean',
             'marquee_until' => 'datetime',
-            'staff_registration_open_from' => 'date',
-            'staff_registration_open_until' => 'date',
+            'maintenance_mode' => 'boolean',
+            'maintenance_until' => 'datetime',
         ];
     }
 
     /**
-     * Whether Staff self-registration is currently open. Null bounds mean
-     * "always open" on that side - e.g. only a from-date set means "open
-     * from then on, no end".
+     * Whether Staff self-registration is currently open FOR A GIVEN CAMPUS.
+     * Each campus has its own optional [open_from, open_until] window (both
+     * full datetimes, not just dates); a campus with no entry, or with both
+     * bounds blank, is always open. Missing bounds on one side mean "open
+     * from then on, no end" (or vice versa).
      */
-    public function isStaffRegistrationOpen(): bool
+    public function isStaffRegistrationOpenForCampus(string $campus): bool
     {
-        $today = now()->toDateString();
+        $window = ($this->staff_registration_windows ?? [])[$campus] ?? null;
 
-        if ($this->staff_registration_open_from && $today < $this->staff_registration_open_from->toDateString()) {
+        if (! $window) {
+            return true;
+        }
+
+        $now = now();
+
+        if (! empty($window['open_from']) && $now->lt(\Illuminate\Support\Carbon::parse($window['open_from']))) {
             return false;
         }
 
-        if ($this->staff_registration_open_until && $today > $this->staff_registration_open_until->toDateString()) {
+        if (! empty($window['open_until']) && $now->gt(\Illuminate\Support\Carbon::parse($window['open_until']))) {
             return false;
         }
 

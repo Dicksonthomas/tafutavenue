@@ -102,6 +102,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/users/{user}', [UserAdminController::class, 'destroy']);
         Route::post('/users/{user}/approve', [UserAdminController::class, 'approve']);
         Route::post('/users/{user}/reject', [UserAdminController::class, 'reject']);
+        Route::post('/users/suspend-campus', [UserAdminController::class, 'suspendCampus']);
+        Route::post('/users/unsuspend-campus', [UserAdminController::class, 'unsuspendCampus']);
         Route::get('/users/import-template', [UserAdminController::class, 'downloadTemplate']);
         Route::post('/users/import', [UserAdminController::class, 'importCsv']);
         Route::get('/users/export-pdf', [UserAdminController::class, 'exportPdf']);

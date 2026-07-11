@@ -45,10 +45,11 @@ class SettingsController extends Controller
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
+            'staff_registration_windows' => $settings->staff_registration_windows ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
-            'staff_registration_open_from' => $settings->staff_registration_open_from,
-            'staff_registration_open_until' => $settings->staff_registration_open_until,
+            'maintenance_mode' => $settings->maintenance_mode,
+            'maintenance_until' => $settings->maintenance_until,
         ]);
     }
 
@@ -79,11 +80,24 @@ class SettingsController extends Controller
             'study_unit_hours.*.end' => ['required_with:study_unit_hours', 'date_format:H:i'],
             'cr_registration_closed_campuses' => ['nullable', 'array'],
             'cr_registration_closed_campuses.*' => [Rule::in($campuses)],
+            'staff_registration_windows' => ['nullable', 'array'],
+            'staff_registration_windows.*' => ['array'],
+            'staff_registration_windows.*.open_from' => ['nullable', 'date'],
+            'staff_registration_windows.*.open_until' => ['nullable', 'date'],
             'marquee_enabled' => ['sometimes', 'boolean'],
             'marquee_until' => ['nullable', 'date'],
-            'staff_registration_open_from' => ['nullable', 'date'],
-            'staff_registration_open_until' => ['nullable', 'date', 'after_or_equal:staff_registration_open_from'],
+            'maintenance_mode' => ['sometimes', 'boolean'],
+            'maintenance_until' => ['nullable', 'date'],
         ]);
+
+        if ($request->has('staff_registration_windows')) {
+            $invalidCampus = collect(array_keys($request->input('staff_registration_windows', [])))
+                ->first(fn ($campus) => ! in_array($campus, $campuses, true));
+
+            if ($invalidCampus) {
+                abort(422, "Unrecognized campus: {$invalidCampus}.");
+            }
+        }
 
         if ($request->has('study_unit_hours')) {
             $invalidDay = collect(array_keys($request->input('study_unit_hours', [])))
@@ -152,12 +166,39 @@ class SettingsController extends Controller
             $settings->marquee_until = $data['marquee_until'] ?? null;
         }
 
-        if ($request->has('staff_registration_open_from')) {
-            $settings->staff_registration_open_from = $data['staff_registration_open_from'] ?? null;
+        if ($request->has('staff_registration_windows')) {
+            $requested = $data['staff_registration_windows'] ?? [];
+            $existing = $settings->staff_registration_windows ?? [];
+
+            if ($campusScope = $request->user()->campusScope()) {
+                // A regular Admin may only set the window for their OWN
+                // campus - any other campus in the payload is ignored,
+                // preserving whatever was already set for them.
+                if (array_key_exists($campusScope, $requested)) {
+                    $existing[$campusScope] = [
+                        'open_from' => $requested[$campusScope]['open_from'] ?? null,
+                        'open_until' => $requested[$campusScope]['open_until'] ?? null,
+                    ];
+                }
+                $settings->staff_registration_windows = $existing;
+            } else {
+                // A Super Admin's payload is trusted as given.
+                $settings->staff_registration_windows = collect($requested)
+                    ->only($campuses)
+                    ->map(fn ($window) => [
+                        'open_from' => $window['open_from'] ?? null,
+                        'open_until' => $window['open_until'] ?? null,
+                    ])
+                    ->all();
+            }
         }
 
-        if ($request->has('staff_registration_open_until')) {
-            $settings->staff_registration_open_until = $data['staff_registration_open_until'] ?? null;
+        if ($request->has('maintenance_mode')) {
+            $settings->maintenance_mode = $request->boolean('maintenance_mode');
+        }
+
+        if ($request->has('maintenance_until')) {
+            $settings->maintenance_until = $data['maintenance_until'] ?? null;
         }
 
         $settings->save();
@@ -175,10 +216,11 @@ class SettingsController extends Controller
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
+            'staff_registration_windows' => $settings->staff_registration_windows ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
-            'staff_registration_open_from' => $settings->staff_registration_open_from,
-            'staff_registration_open_until' => $settings->staff_registration_open_until,
+            'maintenance_mode' => $settings->maintenance_mode,
+            'maintenance_until' => $settings->maintenance_until,
         ]);
     }
 }

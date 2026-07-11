@@ -113,10 +113,6 @@ class AuthController extends Controller
 
     public function registerStaff(Request $request): JsonResponse
     {
-        if (! AppSetting::current()->isStaffRegistrationOpen()) {
-            throw ValidationException::withMessages(['email' => 'Staff registration is currently closed. Contact the Admin.']);
-        }
-
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'title' => ['nullable', Rule::in(self::STAFF_TITLES)],
@@ -126,6 +122,10 @@ class AuthController extends Controller
             'position' => ['nullable', 'string', 'max:255'],
             'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
         ]);
+
+        if (! AppSetting::current()->isStaffRegistrationOpenForCampus($data['campus'])) {
+            throw ValidationException::withMessages(['campus' => 'Staff registration is currently closed for this campus. Contact the Admin.']);
+        }
 
         $plainPassword = Str::password(10, symbols: false);
 
@@ -237,6 +237,22 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+
+        // Maintenance Mode blocks ordinary CR/Staff users only - any Admin
+        // (general or Staff domain) must always be able to log in normally,
+        // since they're the ones who'll flip this back off.
+        $settings = AppSetting::current();
+        if ($settings->maintenance_mode && in_array($user->role, ['cr', 'staff'], true)) {
+            $untilText = $settings->maintenance_until
+                ? ' until '.$settings->maintenance_until->format('d M Y, H:i')
+                : '';
+
+            ActivityLog::record($user->id, 'login_blocked', "{$user->name} tried to log in while the system is under maintenance.");
+
+            return response()->json([
+                'message' => "Our system is currently under maintenance{$untilText}. Please try again later.",
+            ], 503);
+        }
 
         if (! $user->is_active) {
             $isPending = in_array($user->role, ['cr', 'staff'], true) && ! $user->approved_at;

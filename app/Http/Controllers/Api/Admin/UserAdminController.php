@@ -560,6 +560,69 @@ class UserAdminController extends Controller
     }
 
     /**
+     * Suspend every already-active CR (or Staff, if the acting Admin is a
+     * Staff Admin) account on a given campus in one action - for when
+     * there's some operational problem (e.g. a fee/clearance issue) and the
+     * Admin needs to lock everyone out at once until it's resolved. Only
+     * ever touches role='cr'/'staff' rows - Admin accounts are never
+     * affected, so Admins can always keep logging in normally to undo this.
+     * Pending (never-approved) accounts are left alone - they can't log in
+     * anyway - so this is cleanly reversible via unsuspendCampus().
+     */
+    public function suspendCampus(Request $request): JsonResponse
+    {
+        $campuses = ['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'];
+        $role = $request->user()->isStaffAdmin() ? 'staff' : 'cr';
+        $label = $role === 'staff' ? 'Staff' : 'CR';
+
+        $data = $request->validate([
+            'campus' => ['required', Rule::in($campuses)],
+        ]);
+
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $data['campus'] !== $campusScope, 403, "You can only manage {$label} from your own campus.");
+
+        $count = User::where('role', $role)
+            ->where('campus', $data['campus'])
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        ActivityLog::record($request->user()->id, 'campus_suspended', "{$request->user()->name} suspended all {$count} active {$label} account(s) on {$data['campus']}.");
+
+        return response()->json(['message' => "{$count} {$label} account(s) on this campus have been suspended.", 'count' => $count]);
+    }
+
+    /**
+     * Reverses suspendCampus() - reactivates every account on that campus
+     * that was suspended (is_active=false but WAS previously approved, i.e.
+     * approved_at is set) - never touches still-pending (never-approved)
+     * accounts, which must go through the normal approve() flow instead.
+     */
+    public function unsuspendCampus(Request $request): JsonResponse
+    {
+        $campuses = ['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'];
+        $role = $request->user()->isStaffAdmin() ? 'staff' : 'cr';
+        $label = $role === 'staff' ? 'Staff' : 'CR';
+
+        $data = $request->validate([
+            'campus' => ['required', Rule::in($campuses)],
+        ]);
+
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $data['campus'] !== $campusScope, 403, "You can only manage {$label} from your own campus.");
+
+        $count = User::where('role', $role)
+            ->where('campus', $data['campus'])
+            ->where('is_active', false)
+            ->whereNotNull('approved_at')
+            ->update(['is_active' => true]);
+
+        ActivityLog::record($request->user()->id, 'campus_unsuspended', "{$request->user()->name} reactivated {$count} suspended {$label} account(s) on {$data['campus']}.");
+
+        return response()->json(['message' => "{$count} {$label} account(s) on this campus have been reactivated.", 'count' => $count]);
+    }
+
+    /**
      * If the generated email already exists, append a number to the end of
      * the local-part until an unused email is found.
      */
