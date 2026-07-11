@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 // PUBLIC (no login required)
 // ---------------------------------------------------------------------
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register-staff', [AuthController::class, 'registerStaff']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/settings', [SettingsController::class, 'show']);
@@ -98,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users', [UserAdminController::class, 'store']);
         Route::put('/users/{user}', [UserAdminController::class, 'update']);
         Route::delete('/users/{user}', [UserAdminController::class, 'destroy']);
+        Route::post('/users/{user}/approve', [UserAdminController::class, 'approve']);
         Route::get('/users/import-template', [UserAdminController::class, 'downloadTemplate']);
         Route::post('/users/import', [UserAdminController::class, 'importCsv']);
         Route::get('/users/export-pdf', [UserAdminController::class, 'exportPdf']);

@@ -26,6 +26,7 @@ class Venue extends Model
         'blocked_purposes',
         'restricted_levels',
         'restricted_department',
+        'restricted_role',
     ];
 
     protected function casts(): array
@@ -53,6 +54,10 @@ class Venue extends Model
         }
 
         if (! empty($this->restricted_department) && $this->restricted_department !== $user->department) {
+            return false;
+        }
+
+        if ($this->restricted_role && $user->role !== 'admin' && $user->role !== $this->restricted_role) {
             return false;
         }
 

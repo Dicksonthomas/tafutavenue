@@ -202,6 +202,12 @@ class BookingController extends Controller
      */
     private function needsReview(User $user, array $data, ?int $excludingBookingId): bool
     {
+        // Staff have no daily auto-approve cap - only the unconditional
+        // venue/time clash check (elsewhere, in BookingRuleChecker) applies.
+        if ($user->isStaff()) {
+            return false;
+        }
+
         $bookingsTodayCount = Booking::where('user_id', $user->id)
             ->whereDate('booking_date', $data['booking_date'])
             ->whereIn('status', ['pending', 'approved'])

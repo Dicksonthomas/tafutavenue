@@ -65,6 +65,7 @@ class VenueAdminController extends Controller
             'restricted_levels' => ['nullable', 'array'],
             'restricted_levels.*' => [Rule::in(['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'])],
             'restricted_department' => ['nullable', 'string', 'max:255'],
+            'restricted_role' => ['nullable', Rule::in(['cr', 'staff'])],
         ]);
 
         // A regular Admin cannot add a venue for a campus other than their
@@ -104,6 +105,7 @@ class VenueAdminController extends Controller
             'restricted_levels' => ['sometimes', 'nullable', 'array'],
             'restricted_levels.*' => [Rule::in(['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'])],
             'restricted_department' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'restricted_role' => ['sometimes', 'nullable', Rule::in(['cr', 'staff'])],
         ]);
 
         // A regular Admin cannot move a venue to another campus.

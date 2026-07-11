@@ -24,6 +24,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'reg_no',
+        'staff_id',
+        'position',
         'email',
         'password',
         'role',
@@ -36,6 +38,7 @@ class User extends Authenticatable
         'level',
         'year_of_study',
         'is_active',
+        'approved_at',
         'preferred_color',
     ];
 
@@ -62,12 +65,18 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
             'is_main_super_admin' => 'boolean',
+            'approved_at' => 'datetime',
         ];
     }
 
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->role === 'staff';
     }
 
     public function isSuperAdmin(): bool

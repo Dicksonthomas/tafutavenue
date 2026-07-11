@@ -26,22 +26,33 @@ class UserAdminController extends Controller
     private const VALID_LEVELS = ['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'];
 
     /**
-     * Filtered CR query (q/campus/faculty/department/program/level/
-     * year_of_study/sex), used by both index() and exportPdf().
+     * Filtered users query (q/campus/faculty/department/program/level/
+     * year_of_study/sex), used by both index() and exportPdf(). Scoped to
+     * `role` (default 'cr') - Staff use the same endpoint with `?role=staff`
+     * (see UserAdminController's frontend counterpart, admin/staff/page.tsx).
      */
     private function filteredUsersQuery(Request $request): Builder
     {
+        $request->validate(['role' => ['sometimes', Rule::in(['cr', 'staff'])]]);
+
         $campusScope = $request->user()->campusScope();
+        $role = $request->query('role', 'cr');
 
         return User::query()
-            ->where('role', 'cr')
-            ->when($request->filled('q'), function ($query) use ($request) {
+            ->where('role', $role)
+            ->when($request->filled('q'), function ($query) use ($request, $role) {
                 $q = $request->string('q');
-                $query->where(function ($w) use ($q) {
+                $query->where(function ($w) use ($q, $role) {
                     $w->where('name', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%")
-                        ->orWhere('reg_no', 'like', "%{$q}%")
-                        ->orWhere('program', 'like', "%{$q}%");
+                        ->orWhere('email', 'like', "%{$q}%");
+
+                    if ($role === 'staff') {
+                        $w->orWhere('staff_id', 'like', "%{$q}%")
+                            ->orWhere('position', 'like', "%{$q}%");
+                    } else {
+                        $w->orWhere('reg_no', 'like', "%{$q}%")
+                            ->orWhere('program', 'like', "%{$q}%");
+                    }
                 });
             })
             // A regular Admin is confined to their own campus (the 'campus'
@@ -275,10 +286,15 @@ class UserAdminController extends Controller
      */
     public function update(Request $request, User $user): JsonResponse
     {
-        abort_unless($user->role === 'cr', 404);
+        abort_unless(in_array($user->role, ['cr', 'staff'], true), 404);
 
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $user->campus !== $campusScope, 403, 'You can only manage CRs from your own campus.');
+        $label = $user->role === 'staff' ? 'Staff' : 'CRs';
+        abort_if($campusScope && $user->campus !== $campusScope, 403, "You can only manage {$label} from your own campus.");
+
+        if ($user->role === 'staff') {
+            return $this->updateStaff($request, $user, $campusScope);
+        }
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
@@ -350,6 +366,42 @@ class UserAdminController extends Controller
     }
 
     /**
+     * Admin edits a Staff member: name, staff_id, position, phone, email,
+     * password. No password/email is mailed - Staff already have their
+     * password from registration, and email/password changes here are rare
+     * corrections, not a fresh account.
+     */
+    private function updateStaff(Request $request, User $user, ?string $campusScope): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'staff_id' => ['sometimes', 'string', 'max:50', Rule::unique('users', 'staff_id')->ignore($user->id)->whereNull('deleted_at')],
+            'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)->whereNull('deleted_at')],
+            'position' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'phone' => ['sometimes', 'string', 'max:20'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'campus' => ['sometimes', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        if ($campusScope) {
+            unset($data['campus']);
+        }
+
+        if (array_key_exists('password', $data) && ! empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        $user->update($data);
+
+        ActivityLog::record($request->user()->id, 'staff_updated', "{$request->user()->name} updated Staff {$user->name}'s details.");
+
+        return response()->json(['user' => $user, 'message' => 'Staff details saved.']);
+    }
+
+    /**
      * Admin removes a CR. Their personal details (name, email, phone,
      * reg_no, faculty, department, program) are erased/hidden, BUT their
      * record is kept (their bookings and activity logs) so the history
@@ -358,19 +410,23 @@ class UserAdminController extends Controller
      */
     public function destroy(Request $request, User $user): JsonResponse
     {
-        abort_unless($user->role === 'cr', 404);
+        abort_unless(in_array($user->role, ['cr', 'staff'], true), 404);
 
+        $isStaff = $user->role === 'staff';
+        $label = $isStaff ? 'Staff' : 'CR';
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $user->campus !== $campusScope, 403, 'You can only manage CRs from your own campus.');
+        abort_if($campusScope && $user->campus !== $campusScope, 403, "You can only manage {$label} from your own campus.");
 
         $originalName = $user->name;
-        $placeholder = "Deleted CR #{$user->id}";
+        $placeholder = "Deleted {$label} #{$user->id}";
 
         $user->tokens()->delete();
 
         $user->update([
             'name' => $placeholder,
             'reg_no' => null,
+            'staff_id' => null,
+            'position' => null,
             'email' => "deleted-{$user->id}@deleted.local",
             'password' => Hash::make(Str::random(32)),
             'phone' => null,
@@ -384,7 +440,7 @@ class UserAdminController extends Controller
             'is_active' => false,
         ]);
 
-        // Soft delete (deleted_at) - the CR no longer appears in the
+        // Soft delete (deleted_at) - the user no longer appears in the
         // /admin/users list, but their record stays in the DB (their
         // bookings/logs remain accessible for history, via withTrashed()
         // on the relevant relations).
@@ -393,10 +449,29 @@ class UserAdminController extends Controller
         ActivityLog::record(
             $request->user()->id,
             'user_deleted',
-            "Admin removed CR \"{$originalName}\" (#{$user->id}). Their booking history has been preserved."
+            "Admin removed {$label} \"{$originalName}\" (#{$user->id}). Their booking history has been preserved."
         );
 
-        return response()->json(['message' => 'CR removed. Their booking history has been preserved for records.']);
+        return response()->json(['message' => "{$label} removed. Their booking history has been preserved for records."]);
+    }
+
+    /**
+     * Admin approves a pending Staff self-registration - the account
+     * becomes active and can now log in. CR accounts never need this (they
+     * are active from registration).
+     */
+    public function approve(Request $request, User $user): JsonResponse
+    {
+        abort_unless($user->role === 'staff', 404);
+
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $user->campus !== $campusScope, 403, 'You can only manage Staff from your own campus.');
+
+        $user->update(['is_active' => true, 'approved_at' => now()]);
+
+        ActivityLog::record($request->user()->id, 'staff_approved', "{$request->user()->name} approved Staff account {$user->name}.");
+
+        return response()->json(['user' => $user, 'message' => 'Staff account approved. They can now log in.']);
     }
 
     /**

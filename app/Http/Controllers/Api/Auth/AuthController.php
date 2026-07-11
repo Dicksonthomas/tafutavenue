@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Controller;
+use App\Mail\StaffRegistrationPendingMail;
 use App\Models\ActivityLog;
 use App\Models\CustomDepartment;
+use App\Models\Notification;
 use App\Models\User;
 use App\Services\CrEmailGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -83,6 +87,88 @@ class AuthController extends Controller
     }
 
     /**
+     * Staff self-registration. Unlike CR, Staff choose their own (official
+     * work) email and identify themselves with a Staff ID/Payroll No
+     * instead of a Reg No - there is no academic profile (faculty/program/
+     * level/year). The account is created INACTIVE and unapproved; an Admin
+     * must approve it (see UserAdminController::approve()) before it can be
+     * used to log in. No Sanctum token is issued here - only login() issues
+     * tokens, and login() is what enforces the approval gate, so a pending
+     * account can never obtain a usable token.
+     */
+    public function registerStaff(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'staff_id' => ['required', 'string', 'max:50', Rule::unique('users', 'staff_id')->whereNull('deleted_at')],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'phone' => ['required', 'string', 'max:20'],
+            'position' => ['nullable', 'string', 'max:255'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+        ]);
+
+        $plainPassword = Str::password(10, symbols: false);
+
+        $user = User::create([
+            ...$data,
+            'password' => Hash::make($plainPassword),
+            'role' => 'staff',
+            'is_active' => false,
+            'approved_at' => null,
+        ]);
+
+        $this->notifyAdminsOfPendingStaff($user);
+
+        return response()->json([
+            'user' => $user,
+            'password' => $plainPassword,
+            'message' => 'Registration submitted. An Admin must approve your account before you can log in. Save your password below - you will need it once approved.',
+        ], 201);
+    }
+
+    /**
+     * Tell that campus's Admins (and every Super Admin) that a new Staff
+     * account is waiting for approval - a DB notification plus an email,
+     * since a missed pending-approval notice permanently blocks a real
+     * employee from ever logging in (more consequential than a missed
+     * booking review, which is DB-only). Mail failures must never break
+     * registration itself.
+     */
+    private function notifyAdminsOfPendingStaff(User $staff): void
+    {
+        $adminIds = User::where('role', 'admin')
+            ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $staff->campus))
+            ->pluck('id');
+
+        $now = now();
+        $rows = $adminIds->map(fn ($adminId) => [
+            'user_id' => $adminId,
+            'type' => 'staff_pending',
+            'title' => "{$staff->name} registered as Staff and needs approval",
+            'body' => $staff->position,
+            'booking_id' => null,
+            'announcement_id' => null,
+            'read_at' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        if ($rows !== []) {
+            Notification::insert($rows);
+        }
+
+        $adminEmails = User::whereIn('id', $adminIds)->pluck('email');
+
+        foreach ($adminEmails as $adminEmail) {
+            try {
+                Mail::to($adminEmail)->send(new StaffRegistrationPendingMail($staff));
+            } catch (\Throwable $e) {
+                Log::error("Failed to email staff-pending notice to {$adminEmail}: ".$e->getMessage());
+            }
+        }
+    }
+
+    /**
      * If the generated email already exists (e.g. similar names), append a
      * number to the end of the local-part until an unused email is found.
      */
@@ -129,11 +215,16 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if (! $user->is_active) {
-            ActivityLog::record($user->id, 'login_blocked', "{$user->name} tried to log in but their account is suspended.");
+            $isPendingStaff = $user->role === 'staff' && ! $user->approved_at;
+            $message = $isPendingStaff
+                ? 'Your account is pending Admin approval. Please check back later.'
+                : 'Your account has been suspended. Contact the Admin.';
 
-            return response()->json([
-                'message' => 'Your account has been suspended. Contact the Admin.',
-            ], 403);
+            ActivityLog::record($user->id, 'login_blocked', $isPendingStaff
+                ? "{$user->name} tried to log in but their Staff account is still pending Admin approval."
+                : "{$user->name} tried to log in but their account is suspended.");
+
+            return response()->json(['message' => $message], 403);
         }
 
         $token = $user->createToken('mobile-app')->plainTextToken;
