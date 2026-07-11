@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class SettingsController extends Controller
@@ -43,6 +44,7 @@ class SettingsController extends Controller
             'footer_link' => $settings->footer_link,
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
+            'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
         ]);
     }
 
@@ -56,9 +58,12 @@ class SettingsController extends Controller
     {
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+        $campuses = ['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'];
+
         $data = $request->validate([
             'primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'logo' => ['nullable', 'image', 'max:2048'],
+            'reset_logo' => ['nullable', 'boolean'],
             'app_name' => ['nullable', 'string', 'max:255'],
             'support_phone' => ['nullable', 'string', 'max:50'],
             'footer_text' => ['nullable', 'string', 'max:255'],
@@ -68,6 +73,8 @@ class SettingsController extends Controller
             'study_unit_hours.*' => ['array'],
             'study_unit_hours.*.start' => ['required_with:study_unit_hours', 'date_format:H:i'],
             'study_unit_hours.*.end' => ['required_with:study_unit_hours', 'date_format:H:i'],
+            'cr_registration_closed_campuses' => ['nullable', 'array'],
+            'cr_registration_closed_campuses.*' => [Rule::in($campuses)],
         ]);
 
         if ($request->has('study_unit_hours')) {
@@ -95,6 +102,10 @@ class SettingsController extends Controller
             $file = $request->file('logo');
             $base64 = base64_encode(file_get_contents($file->getRealPath()));
             $settings->logo_path = 'data:'.$file->getMimeType().';base64,'.$base64;
+        } elseif ($request->boolean('reset_logo')) {
+            // Clears the uploaded logo so the frontend's bundled default
+            // (Mzumbe crest) fallback shows again everywhere.
+            $settings->logo_path = null;
         }
 
         foreach ($superAdminOnlyFields as $field) {
@@ -105,6 +116,24 @@ class SettingsController extends Controller
 
         if ($request->has('study_unit_hours')) {
             $settings->study_unit_hours = $data['study_unit_hours'];
+        }
+
+        if ($request->has('cr_registration_closed_campuses')) {
+            $requested = $data['cr_registration_closed_campuses'] ?? [];
+
+            if ($campusScope = $request->user()->campusScope()) {
+                // A regular Admin may only open/close CR registration for
+                // their OWN campus - any other campus in the payload is
+                // ignored, preserving whatever was already set for them.
+                $existing = $settings->cr_registration_closed_campuses ?? [];
+                $others = array_values(array_diff($existing, [$campusScope]));
+                $settings->cr_registration_closed_campuses = in_array($campusScope, $requested, true)
+                    ? [...$others, $campusScope]
+                    : $others;
+            } else {
+                // A Super Admin's payload is trusted as given.
+                $settings->cr_registration_closed_campuses = array_values(array_intersect($requested, $campuses));
+            }
         }
 
         $settings->save();
@@ -121,6 +150,7 @@ class SettingsController extends Controller
             'footer_link' => $settings->footer_link,
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
+            'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
         ]);
     }
 }

@@ -9,29 +9,30 @@
             <h1 style="color:#ffffff;font-size:18px;margin:0;">University Venue Booking System</h1>
         </div>
         <div style="padding:24px;color:#1e293b;">
-            <p>A new Staff account is waiting for your approval:</p>
+            @php($label = $registrant->role === 'staff' ? 'Staff' : 'CR')
+            <p>A new {{ $label }} account is waiting for your approval:</p>
 
             <table style="width:100%;border-collapse:collapse;margin:16px 0;">
                 <tr>
                     <td style="padding:8px 0;color:#64748b;font-size:13px;">Name</td>
-                    <td style="padding:8px 0;font-weight:bold;">{{ $staff->name }}</td>
+                    <td style="padding:8px 0;font-weight:bold;">{{ $registrant->name }}</td>
                 </tr>
                 <tr>
                     <td style="padding:8px 0;color:#64748b;font-size:13px;">Email</td>
-                    <td style="padding:8px 0;">{{ $staff->email }}</td>
+                    <td style="padding:8px 0;">{{ $registrant->email }}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px 0;color:#64748b;font-size:13px;">Staff ID</td>
-                    <td style="padding:8px 0;">{{ $staff->staff_id }}</td>
+                    <td style="padding:8px 0;color:#64748b;font-size:13px;">{{ $registrant->role === 'staff' ? 'Staff ID' : 'Reg No' }}</td>
+                    <td style="padding:8px 0;">{{ $registrant->role === 'staff' ? $registrant->staff_id : $registrant->reg_no }}</td>
                 </tr>
                 <tr>
                     <td style="padding:8px 0;color:#64748b;font-size:13px;">Campus</td>
-                    <td style="padding:8px 0;">{{ $staff->campus }}</td>
+                    <td style="padding:8px 0;">{{ $registrant->campus }}</td>
                 </tr>
             </table>
 
             <p style="font-size:13px;color:#64748b;">
-                They cannot sign in until an Admin approves their account from the Staff page.
+                They cannot sign in until an Admin approves their account from the {{ $label }} page.
             </p>
         </div>
     </div>

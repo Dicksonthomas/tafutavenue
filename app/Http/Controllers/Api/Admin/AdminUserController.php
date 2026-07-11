@@ -18,11 +18,20 @@ class AdminUserController extends Controller
      * List of all Admins. The Main Super Admin (is_main_super_admin) is not
      * visible to anyone except themselves - both regular Admins and promoted
      * Super Admins cannot see them.
+     *
+     * Domain-scoped: a Staff Admin only ever sees other Staff Admins
+     * (admin_domain='staff'); everyone else sees the 'general' admin roster
+     * by default, with an optional `?domain=staff` for a general Super Admin
+     * who wants to inspect the Staff-Admin list too.
      */
     public function index(Request $request): JsonResponse
     {
+        $viewerIsStaffAdmin = $request->user()->isStaffAdmin();
+        $requestedDomain = $viewerIsStaffAdmin ? 'staff' : ($request->query('domain') === 'staff' ? 'staff' : 'general');
+
         return response()->json(
             User::where('role', 'admin')
+                ->where('admin_domain', $requestedDomain)
                 ->when(! $request->user()->isMainSuperAdmin(), fn ($q) => $q->where('is_main_super_admin', false))
                 ->orderBy('name')
                 ->get()
@@ -34,12 +43,20 @@ class AdminUserController extends Controller
      * Admin. "is_super_admin" during creation is only allowed if the creator
      * is the Main Super Admin - otherwise it is ignored (the new Admin stays
      * a regular admin). Campus is required for a regular Admin (not super).
+     *
+     * Domain: a Staff Admin can only ever create other Staff Admins
+     * (this is the "Staff Super Admin adds another Staff Admin" capability);
+     * a general-domain Super Admin may explicitly request `admin_domain:
+     * 'staff'` too, otherwise the new admin defaults to 'general'.
      */
     public function store(Request $request): JsonResponse
     {
         abort_unless($request->user()->isSuperAdmin(), 403, 'Only a Super Admin can add an Admin.');
 
         $makeSuperAdmin = $request->boolean('is_super_admin') && $request->user()->isMainSuperAdmin();
+        $domain = $request->user()->isStaffAdmin()
+            ? 'staff'
+            : ($request->input('admin_domain') === 'staff' ? 'staff' : 'general');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -54,6 +71,7 @@ class AdminUserController extends Controller
             'password' => Hash::make($data['password']),
             'role' => 'admin',
             'campus' => $makeSuperAdmin ? null : $data['campus'],
+            'admin_domain' => $domain,
         ]);
         $admin->is_super_admin = $makeSuperAdmin;
         $admin->save();
@@ -80,6 +98,11 @@ class AdminUserController extends Controller
             $admin->isMainSuperAdmin() && $admin->id !== $request->user()->id,
             403,
             'You cannot edit the Main Super Admin.'
+        );
+        abort_if(
+            $request->user()->isStaffAdmin() && $admin->admin_domain !== 'staff',
+            403,
+            'You can only manage other Staff Admins.'
         );
 
         $data = $request->validate([
@@ -130,6 +153,11 @@ class AdminUserController extends Controller
         abort_unless($request->user()->isSuperAdmin(), 403, 'Only a Super Admin can remove an Admin.');
         abort_if($admin->isMainSuperAdmin(), 403, 'You cannot remove the Main Super Admin.');
         abort_if($admin->id === $request->user()->id, 403, 'You cannot remove your own account.');
+        abort_if(
+            $request->user()->isStaffAdmin() && $admin->admin_domain !== 'staff',
+            403,
+            'You can only manage other Staff Admins.'
+        );
 
         $admin->tokens()->delete();
         $adminName = $admin->name;

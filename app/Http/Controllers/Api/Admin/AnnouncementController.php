@@ -50,7 +50,7 @@ class AnnouncementController extends Controller
     }
 
     /**
-     * Post an announcement that fans out as a Notification. Two audiences:
+     * Post an announcement that fans out as a Notification. Three audiences:
      *
      * - 'cr' (default): CRs matching the campus/faculty/department/program/
      *   level/year filters (a regular Admin is always locked to their own
@@ -58,6 +58,10 @@ class AnnouncementController extends Controller
      *   university-wide). Other admins don't get a Notification for this -
      *   they already see it (full detail, not just a title) via index()
      *   above, since it's on their campus.
+     * - 'staff': Staff matching the campus filter only (Staff have no
+     *   faculty/department/program/level/year fields) - same campus-scoping
+     *   rule as the 'cr' branch (regular Admin/Staff Admin locked to their
+     *   own campus, Super Admin may pick one or leave blank).
      * - 'admin': every other Admin, campus not relevant.
      */
     public function store(Request $request): JsonResponse
@@ -65,7 +69,7 @@ class AnnouncementController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string', 'max:2000'],
-            'audience' => ['nullable', Rule::in(['cr', 'admin'])],
+            'audience' => ['nullable', Rule::in(['cr', 'staff', 'admin'])],
             'campus' => ['nullable', 'string'],
             'faculty' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
@@ -101,6 +105,16 @@ class AnnouncementController extends Controller
 
             $rows = $adminIds->map(fn ($id) => $notificationRow($id, 'announcement'))->all();
             $recipientCount = $adminIds->count();
+        } elseif ($audience === 'staff') {
+            $campusScope = $request->user()->campusScope();
+
+            $staffIds = User::where('role', 'staff')
+                ->when($campusScope, fn ($q) => $q->where('campus', $campusScope))
+                ->when(! $campusScope && ! empty($data['campus']), fn ($q) => $q->where('campus', $data['campus']))
+                ->pluck('id');
+
+            $rows = $staffIds->map(fn ($id) => $notificationRow($id, 'announcement'))->all();
+            $recipientCount = $staffIds->count();
         } else {
             $campusScope = $request->user()->campusScope();
 
@@ -122,12 +136,11 @@ class AnnouncementController extends Controller
             Notification::insert($rows);
         }
 
+        $audienceLabel = ['admin' => 'admin(s)', 'staff' => 'Staff'][$audience] ?? 'CR(s)';
         ActivityLog::record(
             $request->user()->id,
             'announcement_sent',
-            $audience === 'admin'
-                ? "{$request->user()->name} sent an announcement to {$recipientCount} admin(s): \"{$announcement->title}\"."
-                : "{$request->user()->name} sent an announcement to {$recipientCount} CR(s): \"{$announcement->title}\"."
+            "{$request->user()->name} sent an announcement to {$recipientCount} {$audienceLabel}: \"{$announcement->title}\"."
         );
 
         return response()->json(['announcement' => $announcement, 'recipients' => $recipientCount], 201);

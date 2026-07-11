@@ -15,6 +15,7 @@ class AppSetting extends Model
         'footer_link',
         'login_background_color',
         'study_unit_hours',
+        'cr_registration_closed_campuses',
     ];
 
     protected $attributes = [
@@ -25,6 +26,7 @@ class AppSetting extends Model
     {
         return [
             'study_unit_hours' => 'array',
+            'cr_registration_closed_campuses' => 'array',
         ];
     }
 

@@ -7,23 +7,25 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
-class StaffRegistrationPendingMail extends Mailable
+class RegistrationPendingMail extends Mailable
 {
     public function __construct(
-        public User $staff,
+        public User $registrant,
     ) {}
 
     public function envelope(): Envelope
     {
+        $label = $this->registrant->role === 'staff' ? 'Staff' : 'CR';
+
         return new Envelope(
-            subject: 'New Staff Account Pending Approval - University Venue Booking System',
+            subject: "New {$label} Account Pending Approval - University Venue Booking System",
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            view: 'emails.staff-registration-pending',
+            view: 'emails.registration-pending',
         );
     }
 

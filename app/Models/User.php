@@ -40,6 +40,7 @@ class User extends Authenticatable
         'is_active',
         'approved_at',
         'preferred_color',
+        'admin_domain',
     ];
 
     /**
@@ -77,6 +78,19 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->role === 'staff';
+    }
+
+    /**
+     * A "Staff Admin" - an Admin scoped to ONLY Staff-related admin work
+     * (approve/reject/manage Staff, add a venue) rather than the full admin
+     * area. Orthogonal to campus scoping and to isSuperAdmin() - a Staff
+     * Admin can also be a Super Admin (a "Staff Super Admin"), who can then
+     * create other Staff Admins, mirroring the general Admin/Super Admin
+     * split but confined to the 'staff' domain.
+     */
+    public function isStaffAdmin(): bool
+    {
+        return $this->role === 'admin' && $this->admin_domain === 'staff';
     }
 
     public function isSuperAdmin(): bool

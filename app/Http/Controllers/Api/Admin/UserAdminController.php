@@ -111,15 +111,23 @@ class UserAdminController extends Controller
     }
 
     /**
-     * Admin registers a single CR. If 'reg_no' is provided, the email is
-     * generated automatically (same as normal registration). If the Reg No
-     * has a year that is too old (before 2022) or the CR doesn't have a
+     * Admin registers a single CR or Staff member directly - see
+     * storeStaff() for the Staff branch. If 'reg_no' is provided, the email
+     * is generated automatically (same as normal registration). If the Reg
+     * No has a year that is too old (before 2022) or the CR doesn't have a
      * valid Reg No, the Admin can leave 'reg_no' blank and set 'email'
      * directly instead. The password is generated automatically and sent
      * to the email - it never appears in this response.
      */
     public function store(Request $request): JsonResponse
     {
+        $role = $request->input('role', 'cr');
+        abort_unless(in_array($role, ['cr', 'staff'], true), 422);
+
+        if ($role === 'staff') {
+            return $this->storeStaff($request);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'reg_no' => ['nullable', 'string', 'max:50', Rule::unique('users', 'reg_no')->whereNull('deleted_at')],
@@ -174,6 +182,48 @@ class UserAdminController extends Controller
         return response()->json([
             'user' => $user,
             'message' => "CR added. Password has been sent to email: {$user->email}",
+        ], 201);
+    }
+
+    /**
+     * Admin registers a Staff member directly - unlike self-registration,
+     * this account is immediately active (Admin-created = already trusted,
+     * same reasoning as CR added by an Admin being instantly active). The
+     * password is returned directly in the response (not emailed) -
+     * consistent with Staff's own self-registration, avoiding the
+     * mail-server fragility already fixed once for CR.
+     */
+    private function storeStaff(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'staff_id' => ['required', 'string', 'max:50', Rule::unique('users', 'staff_id')->whereNull('deleted_at')],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'phone' => ['required', 'string', 'max:20'],
+            'position' => ['nullable', 'string', 'max:255'],
+            'campus' => ['required', Rule::in(['morogoro_main', 'dar_es_salaam', 'tanga', 'mbeya'])],
+        ]);
+
+        if ($campusScope = $request->user()->campusScope()) {
+            $data['campus'] = $campusScope;
+        }
+
+        $plainPassword = Str::password(10, symbols: false);
+
+        $user = User::create([
+            ...$data,
+            'password' => Hash::make($plainPassword),
+            'role' => 'staff',
+            'is_active' => true,
+            'approved_at' => now(),
+        ]);
+
+        ActivityLog::record($request->user()->id, 'staff_created', "{$request->user()->name} registered a new Staff member: {$user->name}.");
+
+        return response()->json([
+            'user' => $user,
+            'password' => $plainPassword,
+            'message' => 'Staff added and already active. Save the password below - it will not be shown again.',
         ], 201);
     }
 
@@ -456,22 +506,48 @@ class UserAdminController extends Controller
     }
 
     /**
-     * Admin approves a pending Staff self-registration - the account
-     * becomes active and can now log in. CR accounts never need this (they
-     * are active from registration).
+     * Admin approves a pending CR/Staff self-registration - the account
+     * becomes active and can now log in.
      */
     public function approve(Request $request, User $user): JsonResponse
     {
-        abort_unless($user->role === 'staff', 404);
+        abort_unless(in_array($user->role, ['cr', 'staff'], true), 404);
 
+        $label = $user->role === 'staff' ? 'Staff' : 'CR';
         $campusScope = $request->user()->campusScope();
-        abort_if($campusScope && $user->campus !== $campusScope, 403, 'You can only manage Staff from your own campus.');
+        abort_if($campusScope && $user->campus !== $campusScope, 403, "You can only manage {$label} from your own campus.");
 
         $user->update(['is_active' => true, 'approved_at' => now()]);
 
-        ActivityLog::record($request->user()->id, 'staff_approved', "{$request->user()->name} approved Staff account {$user->name}.");
+        ActivityLog::record($request->user()->id, 'user_approved', "{$request->user()->name} approved {$label} account {$user->name}.");
 
-        return response()->json(['user' => $user, 'message' => 'Staff account approved. They can now log in.']);
+        return response()->json(['user' => $user, 'message' => "{$label} account approved. They can now log in."]);
+    }
+
+    /**
+     * Admin rejects a still-pending CR/Staff self-registration. Unlike
+     * destroy() (which soft-deletes and anonymizes an already-active
+     * account so its booking history survives), a rejected registration
+     * never had any activity worth preserving - so this hard-deletes the
+     * row entirely, to avoid leaving clutter behind.
+     */
+    public function reject(Request $request, User $user): JsonResponse
+    {
+        abort_unless(in_array($user->role, ['cr', 'staff'], true), 404);
+        abort_unless(! $user->is_active && ! $user->approved_at, 422, 'This account is not pending approval.');
+
+        $label = $user->role === 'staff' ? 'Staff' : 'CR';
+        $campusScope = $request->user()->campusScope();
+        abort_if($campusScope && $user->campus !== $campusScope, 403, "You can only manage {$label} from your own campus.");
+
+        $name = $user->name;
+
+        ActivityLog::record($request->user()->id, 'user_rejected', "{$request->user()->name} rejected the pending {$label} registration for \"{$name}\".");
+
+        $user->tokens()->delete();
+        $user->forceDelete();
+
+        return response()->json(['message' => "{$label} registration for \"{$name}\" rejected and removed."]);
     }
 
     /**

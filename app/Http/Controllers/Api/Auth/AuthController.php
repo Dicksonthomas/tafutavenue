@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Controller;
-use App\Mail\StaffRegistrationPendingMail;
+use App\Mail\RegistrationPendingMail;
 use App\Models\ActivityLog;
+use App\Models\AppSetting;
 use App\Models\CustomDepartment;
 use App\Models\Notification;
 use App\Models\User;
@@ -33,6 +34,12 @@ class AuthController extends Controller
      * automatically and returned directly in this response (not emailed -
      * registration deliberately has no mail-server dependency, so it can't
      * be slowed down or blocked by one).
+     *
+     * The account is created INACTIVE and unapproved, same as Staff - an
+     * Admin must approve it (see UserAdminController::approve()) before it
+     * can be used to log in. No Sanctum token is issued here for the same
+     * reason as registerStaff(): only login() enforces the approval gate,
+     * so a pending account must never hold a usable token.
      */
     public function register(Request $request): JsonResponse
     {
@@ -47,6 +54,11 @@ class AuthController extends Controller
             'program' => ['required', 'string', 'max:255'],
             'level' => ['required', Rule::in(['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'])],
         ]);
+
+        $closedCampuses = AppSetting::current()->cr_registration_closed_campuses ?? [];
+        if (in_array($data['campus'], $closedCampuses, true)) {
+            throw ValidationException::withMessages(['campus' => 'CR registration is closed for this campus. Contact the Admin, or register as Staff instead.']);
+        }
 
         try {
             $generated = CrEmailGenerator::generate($data['name'], $data['reg_no']);
@@ -74,15 +86,16 @@ class AuthController extends Controller
             'email' => $email,
             'password' => Hash::make($plainPassword),
             'role' => 'cr',
+            'is_active' => false,
+            'approved_at' => null,
         ]);
 
-        $token = $user->createToken('mobile-app')->plainTextToken;
+        $this->notifyAdminsOfPendingUser($user);
 
         return response()->json([
             'user' => $user,
-            'token' => $token,
             'password' => $plainPassword,
-            'message' => 'Account created. Save your password below - you will need it to sign in again later.',
+            'message' => 'Registration submitted. An Admin must approve your account before you can log in. Save your password below - you will need it once approved.',
         ], 201);
     }
 
@@ -117,7 +130,7 @@ class AuthController extends Controller
             'approved_at' => null,
         ]);
 
-        $this->notifyAdminsOfPendingStaff($user);
+        $this->notifyAdminsOfPendingUser($user);
 
         return response()->json([
             'user' => $user,
@@ -127,25 +140,27 @@ class AuthController extends Controller
     }
 
     /**
-     * Tell that campus's Admins (and every Super Admin) that a new Staff
+     * Tell that campus's Admins (and every Super Admin) that a new CR/Staff
      * account is waiting for approval - a DB notification plus an email,
-     * since a missed pending-approval notice permanently blocks a real
-     * employee from ever logging in (more consequential than a missed
+     * since a missed pending-approval notice permanently blocks the
+     * registrant from ever logging in (more consequential than a missed
      * booking review, which is DB-only). Mail failures must never break
      * registration itself.
      */
-    private function notifyAdminsOfPendingStaff(User $staff): void
+    private function notifyAdminsOfPendingUser(User $registrant): void
     {
+        $label = $registrant->role === 'staff' ? 'Staff' : 'CR';
+
         $adminIds = User::where('role', 'admin')
-            ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $staff->campus))
+            ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $registrant->campus))
             ->pluck('id');
 
         $now = now();
         $rows = $adminIds->map(fn ($adminId) => [
             'user_id' => $adminId,
-            'type' => 'staff_pending',
-            'title' => "{$staff->name} registered as Staff and needs approval",
-            'body' => $staff->position,
+            'type' => $registrant->role === 'staff' ? 'staff_pending' : 'cr_pending',
+            'title' => "{$registrant->name} registered as {$label} and needs approval",
+            'body' => $registrant->role === 'staff' ? $registrant->position : $registrant->reg_no,
             'booking_id' => null,
             'announcement_id' => null,
             'read_at' => null,
@@ -161,9 +176,9 @@ class AuthController extends Controller
 
         foreach ($adminEmails as $adminEmail) {
             try {
-                Mail::to($adminEmail)->send(new StaffRegistrationPendingMail($staff));
+                Mail::to($adminEmail)->send(new RegistrationPendingMail($registrant));
             } catch (\Throwable $e) {
-                Log::error("Failed to email staff-pending notice to {$adminEmail}: ".$e->getMessage());
+                Log::error("Failed to email {$label}-pending notice to {$adminEmail}: ".$e->getMessage());
             }
         }
     }
@@ -215,13 +230,13 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if (! $user->is_active) {
-            $isPendingStaff = $user->role === 'staff' && ! $user->approved_at;
-            $message = $isPendingStaff
+            $isPending = in_array($user->role, ['cr', 'staff'], true) && ! $user->approved_at;
+            $message = $isPending
                 ? 'Your account is pending Admin approval. Please check back later.'
                 : 'Your account has been suspended. Contact the Admin.';
 
-            ActivityLog::record($user->id, 'login_blocked', $isPendingStaff
-                ? "{$user->name} tried to log in but their Staff account is still pending Admin approval."
+            ActivityLog::record($user->id, 'login_blocked', $isPending
+                ? "{$user->name} tried to log in but their account is still pending Admin approval."
                 : "{$user->name} tried to log in but their account is suspended.");
 
             return response()->json(['message' => $message], 403);
