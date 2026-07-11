@@ -18,6 +18,7 @@ class AppSetting extends Model
         'cr_registration_closed_campuses',
         'cr_registration_windows',
         'staff_registration_windows',
+        'staff_registration_closed_campuses',
         'marquee_enabled',
         'marquee_until',
         'maintenance_mode',
@@ -36,6 +37,7 @@ class AppSetting extends Model
             'cr_registration_closed_campuses' => 'array',
             'cr_registration_windows' => 'array',
             'staff_registration_windows' => 'array',
+            'staff_registration_closed_campuses' => 'array',
             'marquee_enabled' => 'boolean',
             'marquee_until' => 'datetime',
             'maintenance_mode' => 'boolean',
@@ -70,8 +72,17 @@ class AppSetting extends Model
         return true;
     }
 
+    /**
+     * Same idea as isCrRegistrationOpenForCampus() - a manual immediate
+     * toggle (staff_registration_closed_campuses) combined with an optional
+     * scheduled window (staff_registration_windows).
+     */
     public function isStaffRegistrationOpenForCampus(string $campus): bool
     {
+        if (in_array($campus, $this->staff_registration_closed_campuses ?? [], true)) {
+            return false;
+        }
+
         return $this->withinWindow($this->staff_registration_windows ?? [], $campus);
     }
 

@@ -47,6 +47,7 @@ class SettingsController extends Controller
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
             'cr_registration_windows' => $settings->cr_registration_windows ?? [],
             'staff_registration_windows' => $settings->staff_registration_windows ?? [],
+            'staff_registration_closed_campuses' => $settings->staff_registration_closed_campuses ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
             'maintenance_mode' => $settings->maintenance_mode,
@@ -89,6 +90,8 @@ class SettingsController extends Controller
             'staff_registration_windows.*' => ['array'],
             'staff_registration_windows.*.open_from' => ['nullable', 'date'],
             'staff_registration_windows.*.open_until' => ['nullable', 'date'],
+            'staff_registration_closed_campuses' => ['nullable', 'array'],
+            'staff_registration_closed_campuses.*' => [Rule::in($campuses)],
             'marquee_enabled' => ['sometimes', 'boolean'],
             'marquee_until' => ['nullable', 'date'],
             'maintenance_mode' => ['sometimes', 'boolean'],
@@ -148,48 +151,21 @@ class SettingsController extends Controller
         }
 
         if ($request->has('cr_registration_closed_campuses')) {
-            $requested = $data['cr_registration_closed_campuses'] ?? [];
-
-            if ($campusScope = $request->user()->campusScope()) {
-                // A regular Admin may only open/close CR registration for
-                // their OWN campus - any other campus in the payload is
-                // ignored, preserving whatever was already set for them.
-                $existing = $settings->cr_registration_closed_campuses ?? [];
-                $others = array_values(array_diff($existing, [$campusScope]));
-                $settings->cr_registration_closed_campuses = in_array($campusScope, $requested, true)
-                    ? [...$others, $campusScope]
-                    : $others;
-            } else {
-                // A Super Admin's payload is trusted as given.
-                $settings->cr_registration_closed_campuses = array_values(array_intersect($requested, $campuses));
-            }
+            $settings->cr_registration_closed_campuses = $this->mergeClosedCampuses(
+                $data['cr_registration_closed_campuses'] ?? [],
+                $settings->cr_registration_closed_campuses ?? [],
+                $request->user()->campusScope(),
+                $campuses,
+            );
         }
 
         if ($request->has('cr_registration_windows')) {
-            $requested = $data['cr_registration_windows'] ?? [];
-            $existing = $settings->cr_registration_windows ?? [];
-
-            if ($campusScope = $request->user()->campusScope()) {
-                // A regular Admin may only set the window for their OWN
-                // campus - any other campus in the payload is ignored,
-                // preserving whatever was already set for them.
-                if (array_key_exists($campusScope, $requested)) {
-                    $existing[$campusScope] = [
-                        'open_from' => $requested[$campusScope]['open_from'] ?? null,
-                        'open_until' => $requested[$campusScope]['open_until'] ?? null,
-                    ];
-                }
-                $settings->cr_registration_windows = $existing;
-            } else {
-                // A Super Admin's payload is trusted as given.
-                $settings->cr_registration_windows = collect($requested)
-                    ->only($campuses)
-                    ->map(fn ($window) => [
-                        'open_from' => $window['open_from'] ?? null,
-                        'open_until' => $window['open_until'] ?? null,
-                    ])
-                    ->all();
-            }
+            $settings->cr_registration_windows = $this->mergeWindows(
+                $data['cr_registration_windows'] ?? [],
+                $settings->cr_registration_windows ?? [],
+                $request->user()->campusScope(),
+                $campuses,
+            );
         }
 
         if ($request->has('marquee_enabled')) {
@@ -201,30 +177,21 @@ class SettingsController extends Controller
         }
 
         if ($request->has('staff_registration_windows')) {
-            $requested = $data['staff_registration_windows'] ?? [];
-            $existing = $settings->staff_registration_windows ?? [];
+            $settings->staff_registration_windows = $this->mergeWindows(
+                $data['staff_registration_windows'] ?? [],
+                $settings->staff_registration_windows ?? [],
+                $request->user()->campusScope(),
+                $campuses,
+            );
+        }
 
-            if ($campusScope = $request->user()->campusScope()) {
-                // A regular Admin may only set the window for their OWN
-                // campus - any other campus in the payload is ignored,
-                // preserving whatever was already set for them.
-                if (array_key_exists($campusScope, $requested)) {
-                    $existing[$campusScope] = [
-                        'open_from' => $requested[$campusScope]['open_from'] ?? null,
-                        'open_until' => $requested[$campusScope]['open_until'] ?? null,
-                    ];
-                }
-                $settings->staff_registration_windows = $existing;
-            } else {
-                // A Super Admin's payload is trusted as given.
-                $settings->staff_registration_windows = collect($requested)
-                    ->only($campuses)
-                    ->map(fn ($window) => [
-                        'open_from' => $window['open_from'] ?? null,
-                        'open_until' => $window['open_until'] ?? null,
-                    ])
-                    ->all();
-            }
+        if ($request->has('staff_registration_closed_campuses')) {
+            $settings->staff_registration_closed_campuses = $this->mergeClosedCampuses(
+                $data['staff_registration_closed_campuses'] ?? [],
+                $settings->staff_registration_closed_campuses ?? [],
+                $request->user()->campusScope(),
+                $campuses,
+            );
         }
 
         if ($request->has('maintenance_mode')) {
@@ -252,10 +219,56 @@ class SettingsController extends Controller
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
             'cr_registration_windows' => $settings->cr_registration_windows ?? [],
             'staff_registration_windows' => $settings->staff_registration_windows ?? [],
+            'staff_registration_closed_campuses' => $settings->staff_registration_closed_campuses ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
             'maintenance_mode' => $settings->maintenance_mode,
             'maintenance_until' => $settings->maintenance_until,
         ]);
+    }
+
+    /**
+     * Merge a requested "closed campuses" list into the existing one - a
+     * regular Admin may only change their OWN campus's membership (any other
+     * campus in the payload is ignored, preserving what was already set for
+     * it); a Super Admin's payload (campusScope() === null) is trusted as
+     * given. Shared by CR and Staff registration's immediate on/off toggle.
+     */
+    private function mergeClosedCampuses(array $requested, array $existing, ?string $campusScope, array $campuses): array
+    {
+        if ($campusScope) {
+            $others = array_values(array_diff($existing, [$campusScope]));
+
+            return in_array($campusScope, $requested, true) ? [...$others, $campusScope] : $others;
+        }
+
+        return array_values(array_intersect($requested, $campuses));
+    }
+
+    /**
+     * Same scoping rule as mergeClosedCampuses(), but for a per-campus
+     * [open_from, open_until] scheduled window instead of a plain toggle.
+     * Shared by CR and Staff registration windows.
+     */
+    private function mergeWindows(array $requested, array $existing, ?string $campusScope, array $campuses): array
+    {
+        if ($campusScope) {
+            if (array_key_exists($campusScope, $requested)) {
+                $existing[$campusScope] = [
+                    'open_from' => $requested[$campusScope]['open_from'] ?? null,
+                    'open_until' => $requested[$campusScope]['open_until'] ?? null,
+                ];
+            }
+
+            return $existing;
+        }
+
+        return collect($requested)
+            ->only($campuses)
+            ->map(fn ($window) => [
+                'open_from' => $window['open_from'] ?? null,
+                'open_until' => $window['open_until'] ?? null,
+            ])
+            ->all();
     }
 }
