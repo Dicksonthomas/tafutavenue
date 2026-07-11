@@ -45,6 +45,8 @@ class SettingsController extends Controller
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
+            'marquee_enabled' => $settings->marquee_enabled,
+            'marquee_until' => $settings->marquee_until,
         ]);
     }
 
@@ -75,6 +77,8 @@ class SettingsController extends Controller
             'study_unit_hours.*.end' => ['required_with:study_unit_hours', 'date_format:H:i'],
             'cr_registration_closed_campuses' => ['nullable', 'array'],
             'cr_registration_closed_campuses.*' => [Rule::in($campuses)],
+            'marquee_enabled' => ['sometimes', 'boolean'],
+            'marquee_until' => ['nullable', 'date'],
         ]);
 
         if ($request->has('study_unit_hours')) {
@@ -136,6 +140,14 @@ class SettingsController extends Controller
             }
         }
 
+        if ($request->has('marquee_enabled')) {
+            $settings->marquee_enabled = $request->boolean('marquee_enabled');
+        }
+
+        if ($request->has('marquee_until')) {
+            $settings->marquee_until = $data['marquee_until'] ?? null;
+        }
+
         $settings->save();
 
         ActivityLog::record($request->user()->id, 'settings_updated', "{$request->user()->name} updated the system settings.");
@@ -151,6 +163,8 @@ class SettingsController extends Controller
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
+            'marquee_enabled' => $settings->marquee_enabled,
+            'marquee_until' => $settings->marquee_until,
         ]);
     }
 }

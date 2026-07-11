@@ -41,6 +41,8 @@ class VenueAdminController extends Controller
             // can filter by any campus (or none, i.e. all of them).
             ->when($campusScope, fn ($query) => $query->where('campus', $campusScope))
             ->when(! $campusScope && $request->filled('campus'), fn ($query) => $query->where('campus', $request->string('campus')))
+            // A Staff Admin doesn't need to see CR-only venues - no student data.
+            ->when($request->user()->isStaffAdmin(), fn ($query) => $query->where(fn ($w) => $w->whereNull('restricted_role')->orWhere('restricted_role', '!=', 'cr')))
             ->orderBy('name')
             ->paginate(30);
 

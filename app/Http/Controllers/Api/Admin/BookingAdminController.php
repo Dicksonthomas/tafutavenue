@@ -32,6 +32,9 @@ class BookingAdminController extends Controller
 
         $bookings = Booking::with(['user', 'venue', 'semester', 'approver'])
             ->when($campusScope, fn ($q) => $q->whereHas('venue', fn ($v) => $v->where('campus', $campusScope)))
+            // A Staff Admin is scoped to only Staff-made bookings - no CR/
+            // student data. A general Admin sees everyone, unchanged.
+            ->when($request->user()->isStaffAdmin(), fn ($q) => $q->whereHas('user', fn ($u) => $u->where('role', 'staff')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('date'), fn ($q) => $q->whereDate('booking_date', $request->string('date')))
             ->when($request->filled('venue_id'), fn ($q) => $q->where('venue_id', $request->integer('venue_id')))

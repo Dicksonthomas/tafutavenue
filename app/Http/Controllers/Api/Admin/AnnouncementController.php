@@ -101,6 +101,7 @@ class AnnouncementController extends Controller
         if ($audience === 'admin') {
             $adminIds = User::where('role', 'admin')
                 ->where('id', '!=', $request->user()->id)
+                ->when(! empty($data['campus']), fn ($q) => $q->where('campus', $data['campus']))
                 ->pluck('id');
 
             $rows = $adminIds->map(fn ($id) => $notificationRow($id, 'announcement'))->all();

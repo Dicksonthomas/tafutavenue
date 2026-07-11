@@ -16,10 +16,13 @@ class AppSetting extends Model
         'login_background_color',
         'study_unit_hours',
         'cr_registration_closed_campuses',
+        'marquee_enabled',
+        'marquee_until',
     ];
 
     protected $attributes = [
         'primary_color' => '#FF7F50',
+        'marquee_enabled' => true,
     ];
 
     protected function casts(): array
@@ -27,6 +30,8 @@ class AppSetting extends Model
         return [
             'study_unit_hours' => 'array',
             'cr_registration_closed_campuses' => 'array',
+            'marquee_enabled' => 'boolean',
+            'marquee_until' => 'datetime',
         ];
     }
 

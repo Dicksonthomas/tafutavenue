@@ -150,8 +150,10 @@ class AuthController extends Controller
     private function notifyAdminsOfPendingUser(User $registrant): void
     {
         $label = $registrant->role === 'staff' ? 'Staff' : 'CR';
+        $expectedDomain = $registrant->role === 'staff' ? 'staff' : 'general';
 
         $adminIds = User::where('role', 'admin')
+            ->where('admin_domain', $expectedDomain)
             ->where(fn ($q) => $q->where('is_super_admin', true)->orWhere('campus', $registrant->campus))
             ->pluck('id');
 
