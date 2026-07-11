@@ -45,6 +45,7 @@ class SettingsController extends Controller
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
+            'cr_registration_windows' => $settings->cr_registration_windows ?? [],
             'staff_registration_windows' => $settings->staff_registration_windows ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
@@ -80,6 +81,10 @@ class SettingsController extends Controller
             'study_unit_hours.*.end' => ['required_with:study_unit_hours', 'date_format:H:i'],
             'cr_registration_closed_campuses' => ['nullable', 'array'],
             'cr_registration_closed_campuses.*' => [Rule::in($campuses)],
+            'cr_registration_windows' => ['nullable', 'array'],
+            'cr_registration_windows.*' => ['array'],
+            'cr_registration_windows.*.open_from' => ['nullable', 'date'],
+            'cr_registration_windows.*.open_until' => ['nullable', 'date'],
             'staff_registration_windows' => ['nullable', 'array'],
             'staff_registration_windows.*' => ['array'],
             'staff_registration_windows.*.open_from' => ['nullable', 'date'],
@@ -90,12 +95,14 @@ class SettingsController extends Controller
             'maintenance_until' => ['nullable', 'date'],
         ]);
 
-        if ($request->has('staff_registration_windows')) {
-            $invalidCampus = collect(array_keys($request->input('staff_registration_windows', [])))
-                ->first(fn ($campus) => ! in_array($campus, $campuses, true));
+        foreach (['cr_registration_windows', 'staff_registration_windows'] as $windowField) {
+            if ($request->has($windowField)) {
+                $invalidCampus = collect(array_keys($request->input($windowField, [])))
+                    ->first(fn ($campus) => ! in_array($campus, $campuses, true));
 
-            if ($invalidCampus) {
-                abort(422, "Unrecognized campus: {$invalidCampus}.");
+                if ($invalidCampus) {
+                    abort(422, "Unrecognized campus: {$invalidCampus}.");
+                }
             }
         }
 
@@ -158,6 +165,33 @@ class SettingsController extends Controller
             }
         }
 
+        if ($request->has('cr_registration_windows')) {
+            $requested = $data['cr_registration_windows'] ?? [];
+            $existing = $settings->cr_registration_windows ?? [];
+
+            if ($campusScope = $request->user()->campusScope()) {
+                // A regular Admin may only set the window for their OWN
+                // campus - any other campus in the payload is ignored,
+                // preserving whatever was already set for them.
+                if (array_key_exists($campusScope, $requested)) {
+                    $existing[$campusScope] = [
+                        'open_from' => $requested[$campusScope]['open_from'] ?? null,
+                        'open_until' => $requested[$campusScope]['open_until'] ?? null,
+                    ];
+                }
+                $settings->cr_registration_windows = $existing;
+            } else {
+                // A Super Admin's payload is trusted as given.
+                $settings->cr_registration_windows = collect($requested)
+                    ->only($campuses)
+                    ->map(fn ($window) => [
+                        'open_from' => $window['open_from'] ?? null,
+                        'open_until' => $window['open_until'] ?? null,
+                    ])
+                    ->all();
+            }
+        }
+
         if ($request->has('marquee_enabled')) {
             $settings->marquee_enabled = $request->boolean('marquee_enabled');
         }
@@ -216,6 +250,7 @@ class SettingsController extends Controller
             'login_background_color' => $settings->login_background_color,
             'study_unit_hours' => $settings->study_unit_hours,
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
+            'cr_registration_windows' => $settings->cr_registration_windows ?? [],
             'staff_registration_windows' => $settings->staff_registration_windows ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,

@@ -16,6 +16,7 @@ class AppSetting extends Model
         'login_background_color',
         'study_unit_hours',
         'cr_registration_closed_campuses',
+        'cr_registration_windows',
         'staff_registration_windows',
         'marquee_enabled',
         'marquee_until',
@@ -33,6 +34,7 @@ class AppSetting extends Model
         return [
             'study_unit_hours' => 'array',
             'cr_registration_closed_campuses' => 'array',
+            'cr_registration_windows' => 'array',
             'staff_registration_windows' => 'array',
             'marquee_enabled' => 'boolean',
             'marquee_until' => 'datetime',
@@ -42,15 +44,14 @@ class AppSetting extends Model
     }
 
     /**
-     * Whether Staff self-registration is currently open FOR A GIVEN CAMPUS.
-     * Each campus has its own optional [open_from, open_until] window (both
-     * full datetimes, not just dates); a campus with no entry, or with both
-     * bounds blank, is always open. Missing bounds on one side mean "open
-     * from then on, no end" (or vice versa).
+     * Whether `$now` falls within a campus's optional [open_from, open_until]
+     * window (both full datetimes, not just dates). No window, or both
+     * bounds blank, means "always open". Missing bounds on one side mean
+     * "open from then on, no end" (or vice versa).
      */
-    public function isStaffRegistrationOpenForCampus(string $campus): bool
+    private function withinWindow(array $windows, string $campus): bool
     {
-        $window = ($this->staff_registration_windows ?? [])[$campus] ?? null;
+        $window = $windows[$campus] ?? null;
 
         if (! $window) {
             return true;
@@ -67,6 +68,28 @@ class AppSetting extends Model
         }
 
         return true;
+    }
+
+    public function isStaffRegistrationOpenForCampus(string $campus): bool
+    {
+        return $this->withinWindow($this->staff_registration_windows ?? [], $campus);
+    }
+
+    /**
+     * CR registration is closed for a campus either because it was manually
+     * toggled closed (cr_registration_closed_campuses - an immediate on/off
+     * with no time bound), OR because "now" falls outside that campus's
+     * scheduled open window (cr_registration_windows) - both can be used
+     * together: the manual toggle for "close it right now", the window for
+     * "close/open automatically at a specific date and time".
+     */
+    public function isCrRegistrationOpenForCampus(string $campus): bool
+    {
+        if (in_array($campus, $this->cr_registration_closed_campuses ?? [], true)) {
+            return false;
+        }
+
+        return $this->withinWindow($this->cr_registration_windows ?? [], $campus);
     }
 
     public static function current(): self

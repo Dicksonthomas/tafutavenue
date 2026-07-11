@@ -55,8 +55,7 @@ class AuthController extends Controller
             'level' => ['required', Rule::in(['Certificate', 'Diploma', 'Degree', 'Masters', 'PhD'])],
         ]);
 
-        $closedCampuses = AppSetting::current()->cr_registration_closed_campuses ?? [];
-        if (in_array($data['campus'], $closedCampuses, true)) {
+        if (! AppSetting::current()->isCrRegistrationOpenForCampus($data['campus'])) {
             throw ValidationException::withMessages(['campus' => 'CR registration is closed for this campus. Contact the Admin, or register as Staff instead.']);
         }
 
