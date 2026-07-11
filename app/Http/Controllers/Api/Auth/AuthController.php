@@ -109,10 +109,17 @@ class AuthController extends Controller
      * tokens, and login() is what enforces the approval gate, so a pending
      * account can never obtain a usable token.
      */
+    public const STAFF_TITLES = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Eng', 'CPA'];
+
     public function registerStaff(Request $request): JsonResponse
     {
+        if (! AppSetting::current()->isStaffRegistrationOpen()) {
+            throw ValidationException::withMessages(['email' => 'Staff registration is currently closed. Contact the Admin.']);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', Rule::in(self::STAFF_TITLES)],
             'staff_id' => ['required', 'string', 'max:50', Rule::unique('users', 'staff_id')->whereNull('deleted_at')],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone' => ['required', 'string', 'max:20'],

@@ -47,6 +47,8 @@ class SettingsController extends Controller
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
+            'staff_registration_open_from' => $settings->staff_registration_open_from,
+            'staff_registration_open_until' => $settings->staff_registration_open_until,
         ]);
     }
 
@@ -79,6 +81,8 @@ class SettingsController extends Controller
             'cr_registration_closed_campuses.*' => [Rule::in($campuses)],
             'marquee_enabled' => ['sometimes', 'boolean'],
             'marquee_until' => ['nullable', 'date'],
+            'staff_registration_open_from' => ['nullable', 'date'],
+            'staff_registration_open_until' => ['nullable', 'date', 'after_or_equal:staff_registration_open_from'],
         ]);
 
         if ($request->has('study_unit_hours')) {
@@ -148,6 +152,14 @@ class SettingsController extends Controller
             $settings->marquee_until = $data['marquee_until'] ?? null;
         }
 
+        if ($request->has('staff_registration_open_from')) {
+            $settings->staff_registration_open_from = $data['staff_registration_open_from'] ?? null;
+        }
+
+        if ($request->has('staff_registration_open_until')) {
+            $settings->staff_registration_open_until = $data['staff_registration_open_until'] ?? null;
+        }
+
         $settings->save();
 
         ActivityLog::record($request->user()->id, 'settings_updated', "{$request->user()->name} updated the system settings.");
@@ -165,6 +177,8 @@ class SettingsController extends Controller
             'cr_registration_closed_campuses' => $settings->cr_registration_closed_campuses ?? [],
             'marquee_enabled' => $settings->marquee_enabled,
             'marquee_until' => $settings->marquee_until,
+            'staff_registration_open_from' => $settings->staff_registration_open_from,
+            'staff_registration_open_until' => $settings->staff_registration_open_until,
         ]);
     }
 }

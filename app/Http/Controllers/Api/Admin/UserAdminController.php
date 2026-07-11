@@ -33,13 +33,19 @@ class UserAdminController extends Controller
      */
     private function filteredUsersQuery(Request $request): Builder
     {
-        $request->validate(['role' => ['sometimes', Rule::in(['cr', 'staff'])]]);
+        $request->validate([
+            'role' => ['sometimes', Rule::in(['cr', 'staff'])],
+            'status' => ['sometimes', Rule::in(['pending', 'active', 'suspended'])],
+        ]);
 
         $campusScope = $request->user()->campusScope();
         $role = $request->query('role', 'cr');
 
         return User::query()
             ->where('role', $role)
+            ->when($request->query('status') === 'pending', fn ($q) => $q->where('is_active', false)->whereNull('approved_at'))
+            ->when($request->query('status') === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($request->query('status') === 'suspended', fn ($q) => $q->where('is_active', false)->whereNotNull('approved_at'))
             ->when($request->filled('q'), function ($query) use ($request, $role) {
                 $q = $request->string('q');
                 $query->where(function ($w) use ($q, $role) {
@@ -66,6 +72,9 @@ class UserAdminController extends Controller
             ->when($request->filled('level'), fn ($query) => $query->where('level', $request->string('level')))
             ->when($request->filled('year_of_study'), fn ($query) => $query->where('year_of_study', $request->integer('year_of_study')))
             ->when($request->filled('sex'), fn ($query) => $query->where('sex', $request->string('sex')))
+            // Pending (unapproved) accounts sort first, so they're easy to
+            // spot without needing the explicit status=pending filter.
+            ->orderByRaw('CASE WHEN is_active = 0 AND approved_at IS NULL THEN 0 ELSE 1 END')
             ->orderBy('name');
     }
 

@@ -11,7 +11,20 @@ class NotificationController extends Controller
 {
     private function myQuery(Request $request)
     {
-        return Notification::where('user_id', $request->user()->id);
+        $user = $request->user();
+
+        return Notification::where('user_id', $user->id)
+            // Defensive: a Staff Admin should never see a CR-pending notice
+            // (and vice versa for a general Admin), even if a stray row
+            // exists from before domain-aware targeting was added.
+            ->when(
+                $user->role === 'admin' && $user->isStaffAdmin(),
+                fn ($q) => $q->where('type', '!=', 'cr_pending')
+            )
+            ->when(
+                $user->role === 'admin' && ! $user->isStaffAdmin(),
+                fn ($q) => $q->where('type', '!=', 'staff_pending')
+            );
     }
 
     /**
@@ -72,5 +85,19 @@ class NotificationController extends Controller
         $count = $this->myQuery($request)->whereNull('read_at')->update(['read_at' => now()]);
 
         return response()->json(['message' => 'All notifications marked as read.', 'updated' => $count]);
+    }
+
+    /**
+     * Delete a single notification from the viewer's own inbox - this only
+     * removes it for them, it doesn't affect the same announcement/booking
+     * notice for any other recipient.
+     */
+    public function destroy(Request $request, Notification $notification): JsonResponse
+    {
+        abort_unless($notification->user_id === $request->user()->id, 403);
+
+        $notification->delete();
+
+        return response()->json(['message' => 'Notification deleted.']);
     }
 }
