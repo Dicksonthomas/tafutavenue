@@ -47,9 +47,9 @@ li { margin-bottom:5px; }
 <!-- ============ PAGE 1 ============ -->
 <div class="page">
   <div class="eyebrow">User Manual &middot; Part 1 of 2</div>
-  <h1>Venue Booking System &mdash; For Class Representatives</h1>
+  <h1>Venue Booking System &mdash; For Class Representatives &amp; Staff</h1>
   <p class="subtitle">How to register, find a free venue on your own campus, book it, keep track of what's been approved, and stay on top of notifications and announcements &mdash; on the web or as an installed app.</p>
-  <div class="meta"><b>Audience</b> Class Representatives (CR) &middot; <b>Covers</b> Morogoro Main, Dar es Salaam, Tanga, Mbeya &middot; <b>Companion document</b> Admin Manual (Part 2)</div>
+  <div class="meta"><b>Audience</b> Class Representatives (CR) &amp; Staff &middot; <b>Covers</b> Morogoro Main, Dar es Salaam, Tanga, Mbeya &middot; <b>Companion document</b> Admin Manual (Part 2) &middot; <b>Live system</b> tafutavenue-web.vercel.app</div>
 
   <h2><span class="num">1.1</span>Creating your account</h2>
   <p>Go to the <b>Register</b> page. You don't choose your own login email &mdash; the system builds it for you from your name and Reg No, so it always matches your official student identity.</p>
@@ -57,12 +57,15 @@ li { margin-bottom:5px; }
   <p><span class="stepnum">2</span><b>Reg No</b> &mdash; enter it in full, e.g. <code>14322055/T.25</code>. The last two digits after the dot must be your intake year; the system shows a live preview of the email it will create, such as <code>firstname.lastname25@mustudent.ac.tz</code>.</p>
   <p><span class="stepnum">3</span>If your Reg No isn't accepted (too old an intake year, or the year hasn't opened for registration yet &mdash; new intakes unlock every October), use <b>Enter Email Manually</b> instead, or ask an Admin to register you.</p>
   <p><span class="stepnum">4</span><b>Phone, Campus, Sex, Faculty, Department, Program, Level,</b> and <b>Year of Study</b> &mdash; fill these in; Program offers a live search drawn from the real teaching timetable.</p>
-  <p><span class="stepnum">5</span><b>Submit.</b> A temporary password is generated automatically and emailed to you &mdash; nobody, including Admins, can see it on screen.</p>
-  <div class="box box-info"><div class="box-title">Didn't get the email?</div>Check your spam folder first. If it's genuinely missing, ask an Admin to look you up on the Students page.</div>
+  <p><span class="stepnum">5</span><b>Submit.</b> Your password is generated automatically and shown to you once, right on screen &mdash; save it, since it isn't emailed and won't be shown again.</p>
+  <div class="box box-warn"><div class="box-title">Your account needs Admin approval first</div>Registering doesn't sign you in right away. Your campus Admin must approve the account before you can log in &mdash; you'll see a "pending approval" message if you try to log in before that happens. Approval is usually quick; check back or contact your Admin if it's taking a while.</div>
+  <p>If registration is closed for your campus (e.g. the intake period for CRs has ended), the Register page will show a plain message instead of the form &mdash; contact your Admin if you believe this is a mistake.</p>
 
   <h2><span class="num">1.2</span>Logging in</h2>
-  <p>Enter your email and the password from your welcome email, then <b>Sign In</b>. First thing after logging in, go to <b>Change Password</b> and set one you'll remember. Once signed in, you stay signed in &mdash; there's no need to log in again each time you close the app, on the web or on your phone, until you explicitly log out.</p>
+  <p>Enter your email and the password from registration, then <b>Sign In</b>. First thing after logging in, go to <b>Change Password</b> and set one you'll remember. Once signed in, you stay signed in &mdash; there's no need to log in again each time you close the app, on the web or on your phone, until you explicitly log out.</p>
   <div class="box box-info"><div class="box-title">Wrong password?</div>The error message stays on screen until you dismiss it, refresh, or a minute passes &mdash; it won't vanish on you mid-read.</div>
+  <div class="box box-info"><div class="box-title">"Our system is under maintenance"</div>If you see this message when logging in, the Admin has temporarily paused ordinary use of the system for maintenance. Try again after the time shown, or contact your Admin.</div>
+  <div class="box box-warn"><div class="box-title">"Your account has been suspended"</div>This means an Admin has temporarily suspended CR (or Staff) accounts on your campus, usually to resolve an operational issue &mdash; it is not the same as a rejected registration. Contact your Admin; access is restored once the issue is resolved.</div>
 
   <h2><span class="num">1.3</span>Dashboard</h2>
   <p>Your <b>Dashboard</b> is the first thing you see after logging in: a quick count of your bookings, what's coming up next, and a short activity feed covering your own actions plus other CRs' booking activity on your campus.</p>
@@ -121,6 +124,25 @@ li { margin-bottom:5px; }
     <li><b>Announcement</b> &mdash; a message your campus Admin has broadcast to CRs (e.g. a schedule change or general notice).</li>
   </ul>
   <p>Filter by <b>type</b>, <b>read/unread</b> status, a specific <b>date</b>, or search by keyword. Click any notification to mark it read and reveal its full message &mdash; or use <b>Mark all as read</b> to clear everything at once.</p>
+  <p>You can also <b>delete</b> a notification you no longer need from this list &mdash; this only removes it from your own inbox.</p>
+</div>
+
+<!-- ============ PAGE 3B ============ -->
+<div class="page">
+  <div class="eyebrow">For Staff</div>
+  <h2><span class="num">1.11</span>Registering as Staff</h2>
+  <p>Staff register separately from Class Representatives, using the <b>Staff</b> tab on the Register page.</p>
+  <p><span class="stepnum">1</span><b>Title</b> (optional) &mdash; choose Mr, Mrs, Ms, Dr, Prof, Eng, or CPA. If set, your greeting throughout the system reads, for example, &ldquo;Hello, Dr. Kilima&rdquo; instead of just your first name.</p>
+  <p><span class="stepnum">2</span><b>Staff ID / Payroll No, Official Email, Phone, Position,</b> and <b>Campus</b> &mdash; unlike CR registration, you choose your own email and there is no academic profile to fill in.</p>
+  <p><span class="stepnum">3</span><b>Submit.</b> Your password is generated automatically and shown to you once, on screen &mdash; save it. As with CR accounts, a Staff account also needs Admin approval before you can log in.</p>
+  <div class="box box-warn"><div class="box-title">Staff registration can be closed</div>An Admin may close Staff self-registration for a campus, either immediately or for a scheduled period. If it's closed when you visit the Register page, you'll see a plain message instead of the form.</div>
+
+  <h2><span class="num">1.12</span>Booking a venue as Staff</h2>
+  <p>Staff use the same <b>Find Venue</b> screen as CRs, with one difference: there is no fixed Study Unit time window to work around. Two quick presets are offered &mdash; <b>Daytime (06:00&ndash;18:00)</b> and <b>Evening (18:00&ndash;22:00)</b> &mdash; or set any start/end time of your own below them. Weekends (Saturday/Sunday) are allowed. A venue is offered as long as it's genuinely free for the time you choose, checked the same way as for CRs.</p>
+  <p>Staff do not have a 2-a-day limit &mdash; every booking that finds a genuinely free venue is confirmed immediately, the same digital-signature step included.</p>
+
+  <h2><span class="num">1.13</span>What Staff cannot see</h2>
+  <p>Staff accounts never see CR/student data anywhere in the system &mdash; the sidebar, venues, bookings, and notifications a Staff member sees are all scoped to Staff activity only.</p>
 </div>
 
 <!-- ============ PAGE 4 ============ -->

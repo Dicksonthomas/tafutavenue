@@ -34,6 +34,7 @@ $docs = [
     'User-Manual-CR' => file_get_contents("$srcDir/User-Manual-CR.html"),
     'Admin-Manual' => file_get_contents("$srcDir/Admin-Manual.html"),
     'System-Report' => $reportHtml,
+    'Proposal' => file_get_contents("$srcDir/Proposal.html"),
 ];
 
 foreach ($docs as $name => $html) {

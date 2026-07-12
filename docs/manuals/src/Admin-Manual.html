@@ -45,7 +45,7 @@ code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:
   <div class="eyebrow">Admin Manual &middot; Part 2 of 2</div>
   <h1>Venue Booking System &mdash; For Administrators</h1>
   <p class="subtitle">Keeping venues and the timetable accurate, reviewing bookings that need a human decision, managing CRs and fellow Admins, and communicating through notifications and announcements.</p>
-  <div class="meta"><b>Audience</b> Campus Admins &amp; Super Admins &middot; <b>Covers</b> Morogoro Main, Dar es Salaam, Tanga, Mbeya &middot; <b>Companion document</b> User Manual (Part 1)</div>
+  <div class="meta"><b>Audience</b> Campus Admins &amp; Super Admins &middot; <b>Covers</b> Morogoro Main, Dar es Salaam, Tanga, Mbeya &middot; <b>Companion document</b> User Manual (Part 1) &middot; <b>Live system</b> tafutavenue-web.vercel.app</div>
 
   <div class="box box-info"><div class="box-title">Campus scoping, in one line</div>As a regular Admin, everything below is automatically limited to your own campus. A Super Admin sees the same screens across all four campuses at once &mdash; see &sect;2.12.</div>
 
@@ -100,12 +100,13 @@ code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:
   <p>Create a semester with its name, academic year, semester number, and start/end dates. <b>Activate</b> the current one &mdash; only one semester is active at a time, and it's what Find Venue and the timetable import screens use by default.</p>
 
   <h2><span class="num">2.8</span>Managing CRs</h2>
-  <p>Open <b>Students (CR)</b>. Filter by Campus, Faculty, Department, Program, Level, Year, or Sex, plus free-text search &mdash; the count of matching CRs updates live.</p>
+  <p>Open <b>Students (CR)</b>. Filter by Campus, Faculty, Department, Program, Level, Year, or Sex, plus free-text search &mdash; the count of matching CRs updates live. A <b>Pending only</b> toggle filters the list down to accounts awaiting your decision, and pending accounts always sort to the top of the list by default, so they're never missed among already-active ones.</p>
   <ul>
-    <li><b>Add CR</b> &mdash; register one CR at a time, the same Reg No/manual-email choice as self-registration.</li>
+    <li><b>Approve</b> / <b>Reject</b> &mdash; shown in place of Edit/Remove for a pending (self-registered, not-yet-approved) account. Approve activates it immediately; Reject permanently deletes it (a still-pending account has no booking history worth keeping, unlike Remove below).</li>
+    <li><b>Add CR</b> &mdash; register one CR at a time, the same Reg No/manual-email choice as self-registration; an Admin-added CR is active immediately, with no approval step.</li>
     <li><b>Import CSV</b> &mdash; register many at once; download the template first. Rows with a duplicate or invalid Reg No are skipped and listed, not silently dropped.</li>
     <li><b>Edit</b> &mdash; update any detail, including their Reg No if it was entered incorrectly; if you change their name or Reg No and they have one set, their email is regenerated and they're notified.</li>
-    <li><b>Remove</b> &mdash; a soft removal: personal details are cleared and they show as "Deleted CR #id" going forward, but their full booking history is kept for records.</li>
+    <li><b>Remove</b> &mdash; a soft removal for an already-active CR: personal details are cleared and they show as "Deleted CR #id" going forward, but their full booking history is kept for records.</li>
     <li><b>Print List</b> &mdash; a PDF of exactly the CRs your current filters show.</li>
   </ul>
   <p>Each CR's Campus badge is color-coded, so mixed lists stay easy to scan.</p>
@@ -137,25 +138,58 @@ code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:
 <!-- ============ PAGE 5 (NEW) ============ -->
 <div class="page">
   <h2><span class="num">2.13</span>Notifications</h2>
-  <p>The bell icon in the top bar shows how many notifications you haven't read yet, as a number. Click it to open your <b>Notifications</b> page, which has two tabs.</p>
-  <h3>Inbox</h3>
+  <p>The bell icon in the top bar shows how many notifications you haven't read yet, as a number. Click it to open your <b>Notifications</b> inbox.</p>
   <ul>
     <li><b>Booking Pending</b> &mdash; a CR on your campus has requested a 3rd-or-later booking that day and needs your decision. Click it to jump straight to the <b>Pending</b> tab on Bookings, ready to approve or reject.</li>
+    <li><b>CR Pending Approval</b> / <b>Staff Pending Approval</b> &mdash; a new self-registration on your campus needs your decision (&sect;2.8, &sect;2.16). A Staff Admin only ever sees the Staff version, and vice versa for a general Admin.</li>
     <li><b>Announcement</b> &mdash; something another Admin on your campus (or a Super Admin) has broadcast.</li>
   </ul>
-  <p>Filter your Inbox by <b>type</b>, <b>read/unread</b> status, a specific <b>date</b>, or search by keyword. Click any notification to mark it read and reveal its full message, or use <b>Mark all as read</b> to clear everything at once.</p>
-  <h3>Announcements tab</h3>
-  <p>Shows every announcement posted by any Admin on your campus (all campuses, for a Super Admin), each with who posted it, how many people received it, and how many have read it so far. You can <b>Edit</b> or <b>Delete</b> your own posts at any time from here &mdash; editing updates the message for everyone who already has it, deleting removes it from their notifications entirely. You can see, but not edit or delete, an announcement posted by a colleague.</p>
+  <p>Filter your inbox by <b>type</b>, <b>read/unread</b> status, a specific <b>date</b>, or search by keyword. Click any notification to mark it read and reveal its full message, or use <b>Mark all as read</b> to clear everything at once. You can also <b>delete</b> any notification from your own inbox that you no longer need.</p>
 
-  <h2><span class="num">2.14</span>Posting an announcement</h2>
-  <p>Press <b>New Announcement</b> from the Notifications page.</p>
-  <h3>Audience</h3>
-  <p>Choose who it goes to:</p>
+  <h2><span class="num">2.14</span>Announcements &amp; the marquee</h2>
+  <p>Open <b>Announcements</b> in the sidebar to see every announcement posted on your campus (all campuses, for a Super Admin), each with who posted it, how many people received it, and how many have read it so far. You can <b>Edit</b> or <b>Delete</b> your own posts at any time &mdash; editing updates the message for everyone who already has it, deleting removes it from their notifications entirely. You can see, but not edit or delete, an announcement posted by a colleague.</p>
+  <h3>Posting an announcement</h3>
+  <p>Press <b>New Announcement</b>, then choose the <b>Audience</b>:</p>
   <ul>
-    <li><b>CRs</b> &mdash; goes to CRs on your campus (a Super Admin may pick a specific campus, or leave it as <b>All Campuses</b>). Optionally narrow it further by <b>Faculty</b>, <b>Department</b>, <b>Program</b>, <b>Level</b>, or <b>Year of Study</b> &mdash; leave any of these blank to reach everyone in that campus. Faculty/Department/Program can be chosen from the list or typed if not listed.</li>
-    <li><b>Admins</b> &mdash; goes directly to every other Admin, as a plain notification (not shown on the Announcements tab as belonging to a campus, since it isn't a CR broadcast).</li>
+    <li><b>CRs</b> &mdash; goes to CRs on your campus (a Super Admin may pick a specific campus, or leave it as <b>All Campuses</b>). Optionally narrow it further by <b>Faculty</b>, <b>Department</b>, <b>Program</b>, <b>Level</b>, or <b>Year of Study</b>.</li>
+    <li><b>Staff</b> &mdash; goes to Staff on your campus, the same campus-scoping rule as CRs. A Staff Admin's announcements only ever reach Staff, never CRs.</li>
+    <li><b>Admins</b> &mdash; goes to fellow Admins, optionally narrowed to one campus.</li>
   </ul>
-  <p>After sending, you'll see how many people it reached. It then appears in your Announcements tab, ready to edit or delete whenever needed.</p>
+  <p>After sending, you'll see how many people it reached.</p>
+  <h3>The marquee (scrolling banner)</h3>
+  <p>Every announcement a CR or Staff member has received also scrolls across the top of their dashboard as a marquee banner, so it's seen even before they open Notifications. Under <b>Settings</b>, any Admin can switch the marquee <b>On/Off</b> and optionally set a <b>show until</b> date/time, after which it hides itself automatically without needing to be turned off manually.</p>
+</div>
+
+<!-- ============ PAGE 5B (NEW) ============ -->
+<div class="page">
+  <h2><span class="num">2.15</span>Staff Admin &amp; Super Staff Admin</h2>
+  <p>Alongside the general Admin track (CRs, venues, timetable), the system has a second, entirely separate <b>Staff Admin</b> track for managing Staff accounts and activity. A Staff Admin's sidebar mirrors a general Admin's &mdash; Staff, Notifications, Announcements, Venues, Bookings, Booked Venues, Settings &mdash; but every screen is scoped to Staff data only; a Staff Admin never sees a CR, a student booking, or student-only settings anywhere in the system, and a general Admin's sidebar no longer shows a Staff entry at all.</p>
+  <p>A <b>Super Staff Admin</b> is the Staff-track equivalent of a Super Admin: they oversee Staff accounts and activity across all four campuses, and can create additional Staff Admins (also confined to the Staff track) from the Admins page &mdash; the same way a general Super Admin creates general Admins. A Staff Super Admin cannot see or manage any general-domain Admin, and vice versa.</p>
+  <div class="box box-info"><div class="box-title">Who can create a Staff Admin?</div>Only a Super Admin (general) or a Super Staff Admin can add a new Staff Admin, from the Admins page &mdash; the same screen used for general Admins, with a domain choice available to a general Super Admin.</div>
+
+  <h2><span class="num">2.16</span>Managing Staff &amp; approving pending accounts</h2>
+  <p>Open <b>Staff</b> (visible to both a general Admin, for oversight, and a Staff Admin, as their primary screen). It works the same way as Students (CR) &mdash; see &sect;2.8 &mdash; with a <b>Pending only</b> filter, pending-first sorting, and <b>Approve</b>/<b>Reject</b> in place of Edit/Remove for a not-yet-approved account.</p>
+  <ul>
+    <li><b>Add Staff</b> &mdash; register a Staff member directly; the account is active immediately, with no approval step, and the password is shown once on screen (not emailed).</li>
+    <li><b>Edit / Remove</b> &mdash; same behavior as for CRs: Remove is a soft removal that clears personal details but keeps booking history.</li>
+  </ul>
+</div>
+
+<!-- ============ PAGE 5C (NEW) ============ -->
+<div class="page">
+  <h2><span class="num">2.17</span>Registration windows (CR &amp; Staff)</h2>
+  <p>Under <b>Settings</b>, both CR and Staff self-registration can be controlled per campus, in two ways that work together:</p>
+  <ul>
+    <li><b>Open / Closed toggle</b> &mdash; an immediate, manual switch. A regular Admin only sees and controls their own campus; a Super Admin (or Super Staff Admin, for the Staff toggle) sees and controls all four, individually or all at once.</li>
+    <li><b>Scheduled window</b> &mdash; an optional <b>Open from</b> / <b>Open until</b> date and time per campus, for automatically opening or closing registration at a specific moment without needing to remember to flip the toggle yourself. Leave both blank to leave a campus unaffected by scheduling.</li>
+  </ul>
+  <p>When registration is closed for the campus a visitor selects on the Register page &mdash; whether by the toggle or by being outside the scheduled window &mdash; the rest of the form is replaced with a plain "Registration is closed" message, instead of a fillable-but-rejected form. If both CR and Staff are closed on every campus at once, the whole Register page shows a single closed notice.</p>
+
+  <h2><span class="num">2.18</span>Maintenance Mode</h2>
+  <p>Under <b>Settings</b>, any Admin (general or Staff, super or not) can switch on <b>Maintenance Mode</b>, optionally with an <b>expected back until</b> date/time. While on, any ordinary CR or Staff member trying to log in is told the system is under maintenance and cannot proceed. Every Admin account, of any kind, is completely unaffected and can keep logging in and working as normal &mdash; this is what lets an Admin turn maintenance back off once the issue is resolved.</p>
+
+  <h2><span class="num">2.19</span>Suspending accounts by campus</h2>
+  <p>Under <b>Settings</b>, a <b>Suspend CR/Staff Accounts by Campus</b> tool lets an Admin lock out every currently-active account of their kind (CR for a general Admin, Staff for a Staff Admin) on a chosen campus in one action &mdash; useful for an operational issue affecting a whole campus. A confirmation is required before it runs. A matching <b>Reactivate</b> action restores exactly the accounts that were suspended this way. Admin accounts are never touched by this tool, so Admins can always log in normally to run it in either direction.</p>
 </div>
 
 <!-- ============ PAGE 6 ============ -->
@@ -175,6 +209,7 @@ code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:
     <tr><td>Run database migrations</td><td>&mdash;</td><td>&mdash;</td><td>Yes</td></tr>
   </table>
   <p class="small">*Except the Main Super Admin, who cannot be edited, demoted, or removed by anyone else. **Even a Super Admin cannot edit or delete an announcement posted by another Admin &mdash; only its own author can.</p>
+  <p class="small">A Staff Admin / Super Staff Admin has the same shape of access as an Admin / Super Admin above, but entirely within the separate Staff track (&sect;2.15) &mdash; never CR/student data, and never visible to or from the general Admin track.</p>
 
   <hr class="sep">
 
@@ -184,9 +219,13 @@ code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:
   <h3>"Adding/editing something suddenly shows a server error."</h3>
   <p>A recent update may need a one-time database step &mdash; go to Settings -&gt; Database Maintenance -&gt; Run Database Migrations (Super Admin only, &sect;2.12).</p>
   <h3>"I can't find a particular Admin in the list."</h3>
-  <p>If it's the Main Super Admin, that's expected &mdash; their account is intentionally hidden from everyone else, by design.</p>
+  <p>If it's the Main Super Admin, that's expected &mdash; their account is intentionally hidden from everyone else, by design. If it's a Staff Admin, check the Admins page's domain filter &mdash; a general Super Admin can view either track.</p>
   <h3>"Why can't I edit this announcement?"</h3>
-  <p>Only the Admin who originally posted it can edit or delete it &mdash; even a Super Admin can only manage their own. You can still read it, and see how many people it reached, from the Announcements tab.</p>
+  <p>Only the Admin who originally posted it can edit or delete it &mdash; even a Super Admin can only manage their own. You can still read it, and see how many people it reached, from the Announcements page.</p>
+  <h3>"A CR/Staff account is stuck as pending."</h3>
+  <p>Open Students (CR) or Staff, turn on <b>Pending only</b>, and Approve or Reject it &mdash; see &sect;2.8 / &sect;2.16.</p>
+  <h3>"Users say they can't log in and see a maintenance/suspension message."</h3>
+  <p>Check Settings -&gt; Maintenance Mode (&sect;2.18) and the campus suspension tool (&sect;2.19) &mdash; one of these may still be switched on from a previous incident. Your own Admin login is never affected by either.</p>
 </div>
 
 </body>

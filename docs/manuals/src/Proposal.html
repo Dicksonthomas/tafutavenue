@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Proposal - University Venue Booking System</title>
+<style>
+@page { margin: 0; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #000;
+  margin: 0;
+  text-align: center;
+}
+.page { padding: 50px 60px; page-break-after: always; }
+.page:last-child { page-break-after: avoid; }
+h1 { font-size: 16pt; font-weight: 700; text-transform: uppercase; margin: 0 0 6px 0; }
+h2 { font-size: 13pt; font-weight: 700; text-transform: uppercase; margin: 22px 0 10px 0; }
+p { margin: 0 0 12px 0; text-align: center; }
+ul, ol { margin: 0 0 12px 0; padding: 0; list-style-position: inside; text-align: center; }
+li { margin-bottom: 6px; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0 16px 0; }
+th, td { border: 1px solid #000; padding: 6px 10px; text-align: center; vertical-align: top; }
+th { font-weight: 700; }
+.meta { font-size: 11pt; margin-bottom: 6px; }
+.link { font-weight: 700; }
+hr.sep { border: 0; border-top: 1px solid #000; margin: 18px 0; }
+.small { font-size: 10.5pt; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <p class="meta">MZUMBE UNIVERSITY</p>
+  <h1>Proposal</h1>
+  <h1>University Venue Booking System</h1>
+  <p class="meta">Prepared for Staff Review</p>
+  <p class="meta">Date: 12 July 2026</p>
+
+  <hr class="sep">
+
+  <h2>1. Introduction</h2>
+  <p>
+    This proposal introduces the University Venue Booking System, a digital platform developed for
+    Mzumbe University to manage the reservation of lecture halls, laboratories, seminar rooms, and
+    other campus venues across all four campuses &mdash; Morogoro Main, Dar es Salaam, Tanga, and
+    Mbeya. The system is presented here for staff review and feedback before wider adoption.
+  </p>
+
+  <h2>2. Background &amp; Problem Statement</h2>
+  <p>
+    Venue booking at the University has traditionally been handled through informal,
+    first-come arrangements between Class Representatives, Staff, and campus administration.
+    This approach has often led to double-bookings, clashes with the official teaching timetable,
+    and unnecessary delays in confirming a venue for a class, meeting, or activity. There has been
+    no single, reliable record of what is booked, by whom, and for how long.
+  </p>
+
+  <h2>3. Objectives</h2>
+  <ol>
+    <li>To provide one authoritative record of every venue booking, checked automatically
+      against the official teaching timetable so a booking can never clash with a scheduled class.</li>
+    <li>To let Class Representatives and Staff book a free venue in minutes, without needing to
+      manually consult an Admin for every request.</li>
+    <li>To give Administrators clear tools to manage venues, the timetable, accounts, and
+      bookings that genuinely need a human decision.</li>
+    <li>To keep each campus's data &mdash; venues, timetable, bookings, and people &mdash;
+      isolated from the others, while still allowing university-wide oversight where needed.</li>
+  </ol>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2>4. Who Uses the System</h2>
+  <table>
+    <tr><th>Role</th><th>Description</th></tr>
+    <tr><td>Class Representative (CR)</td><td>Registers and books venues on behalf of their class, on their own campus.</td></tr>
+    <tr><td>Staff</td><td>Registers separately from CRs and books venues for meetings, invigilation, and other official duties.</td></tr>
+    <tr><td>Admin</td><td>Manages venues, the timetable, bookings, and accounts for one campus.</td></tr>
+    <tr><td>Staff Admin</td><td>An Admin scoped only to Staff accounts and Staff-related activity, kept separate from CR/student data.</td></tr>
+    <tr><td>Super Admin / Super Staff Admin</td><td>Oversees all four campuses within their respective domain (general or Staff), and manages other Admin accounts.</td></tr>
+  </table>
+  <p>
+    Every new CR or Staff account must first be approved by an Admin before it can be used to log
+    in, so account creation is never fully automatic.
+  </p>
+
+  <h2>5. Key Features</h2>
+  <ul>
+    <li>Automatic conflict checking against the official teaching timetable for every booking.</li>
+    <li>Separate, approval-gated registration for both Class Representatives and Staff.</li>
+    <li>Digital signature capture to confirm every booking.</li>
+    <li>A review queue for bookings that need an Admin's decision, with instant notifications
+      once a decision is made.</li>
+    <li>Campus-scoped venue, timetable, and account management for every Admin.</li>
+    <li>A dedicated Staff Admin track, kept fully separate from student/CR data.</li>
+    <li>Announcements and a scrolling marquee banner, targetable to CRs, Staff, or fellow Admins.</li>
+    <li>Configurable registration windows &mdash; an Admin may open or close CR or Staff
+      self-registration per campus, either immediately or on a scheduled date and time.</li>
+    <li>A Maintenance Mode switch, so an Admin can inform ordinary users the system is
+      temporarily unavailable, while Admin access remains unaffected.</li>
+    <li>A campus-wide account suspension tool, for temporarily locking out CR or Staff accounts
+      on one campus during an operational issue, fully reversible.</li>
+    <li>Installable as a Progressive Web App and as a native Android application, usable offline
+      for previously viewed data.</li>
+  </ul>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h2>6. Current Status</h2>
+  <p>
+    The system is fully built and deployed, and is available for review at the link below.
+    Staff are encouraged to explore the system, register an account, and try booking a venue,
+    then share any feedback, questions, or concerns before a wider rollout is planned.
+  </p>
+  <p class="link">https://tafutavenue-web.vercel.app</p>
+
+  <h2>7. Companion Documents</h2>
+  <p>
+    Two additional manuals accompany this proposal: a User Manual, covering registration and
+    booking for Class Representatives and Staff, and an Admin Manual, covering venue, account,
+    and system management for Administrators.
+  </p>
+
+  <h2>8. Request for Review</h2>
+  <p>
+    Staff are kindly requested to review this proposal and the live system, and to provide
+    feedback on its suitability for adoption across all campuses.
+  </p>
+
+  <hr class="sep">
+  <p class="small">Prepared by Dickson &middot; Mzumbe University Venue Booking System</p>
+</div>
+
+</body>
+</html>
