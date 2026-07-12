@@ -30,11 +30,22 @@ $reportHtml = str_replace(
     $template
 );
 
+// Annotated screenshots of the live Register page (CR and Staff modes),
+// captured with puppeteer-core against a running local dev server and
+// annotated with numbered callout arrows via Pillow - re-capture and
+// re-annotate both if the Register page's layout changes.
+$crShotB64 = base64_encode(file_get_contents("$srcDir/register-cr-shot.png"));
+$staffShotB64 = base64_encode(file_get_contents("$srcDir/register-staff-shot.png"));
+$shotReplacements = [
+    '{{REGISTER_CR_SHOT}}' => "data:image/png;base64,{$crShotB64}",
+    '{{REGISTER_STAFF_SHOT}}' => "data:image/png;base64,{$staffShotB64}",
+];
+
 $docs = [
-    'User-Manual-CR' => file_get_contents("$srcDir/User-Manual-CR.html"),
+    'User-Manual-CR' => strtr(file_get_contents("$srcDir/User-Manual-CR.html"), $shotReplacements),
     'Admin-Manual' => file_get_contents("$srcDir/Admin-Manual.html"),
     'System-Report' => $reportHtml,
-    'Proposal' => file_get_contents("$srcDir/Proposal.html"),
+    'Proposal' => strtr(file_get_contents("$srcDir/Proposal.html"), $shotReplacements),
 ];
 
 foreach ($docs as $name => $html) {

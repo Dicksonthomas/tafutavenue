@@ -12,22 +12,25 @@ body {
   line-height: 1.5;
   color: #000;
   margin: 0;
-  text-align: center;
+  text-align: justify;
 }
 .page { padding: 50px 60px; page-break-after: always; }
 .page:last-child { page-break-after: avoid; }
-h1 { font-size: 16pt; font-weight: 700; text-transform: uppercase; margin: 0 0 6px 0; }
-h2 { font-size: 13pt; font-weight: 700; text-transform: uppercase; margin: 22px 0 10px 0; }
-p { margin: 0 0 12px 0; text-align: center; }
-ul, ol { margin: 0 0 12px 0; padding: 0; list-style-position: inside; text-align: center; }
+h1 { font-size: 16pt; font-weight: 700; text-transform: uppercase; margin: 0 0 6px 0; text-align: center; }
+h2 { font-size: 13pt; font-weight: 700; text-transform: uppercase; margin: 22px 0 10px 0; text-align: center; }
+p { margin: 0 0 12px 0; text-align: justify; }
+ul, ol { margin: 0 0 12px 0; padding: 0 0 0 24px; list-style-position: outside; text-align: justify; }
 li { margin-bottom: 6px; }
 table { width: 100%; border-collapse: collapse; margin: 10px 0 16px 0; }
 th, td { border: 1px solid #000; padding: 6px 10px; text-align: center; vertical-align: top; }
 th { font-weight: 700; }
-.meta { font-size: 11pt; margin-bottom: 6px; }
-.link { font-weight: 700; }
+.meta { font-size: 11pt; margin-bottom: 6px; text-align: center; }
+.link { font-weight: 700; text-align: center; }
 hr.sep { border: 0; border-top: 1px solid #000; margin: 18px 0; }
-.small { font-size: 10.5pt; }
+.small { font-size: 10.5pt; text-align: center; }
+.shot-wrap { margin: 14px 0; text-align: center; }
+img.shot { max-width: 100%; max-height: 620px; width: auto; border: 1px solid #999; }
+.shot-caption { font-size: 10pt; text-align: center; margin-top: 6px; font-style: italic; }
 </style>
 </head>
 <body>
@@ -125,8 +128,39 @@ hr.sep { border: 0; border-top: 1px solid #000; margin: 18px 0; }
     booking for Class Representatives and Staff, and an Admin Manual, covering venue, account,
     and system management for Administrators.
   </p>
+</div>
 
-  <h2>8. Request for Review</h2>
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2>8. How to Register &mdash; Class Representative</h2>
+  <p>
+    The Register page offers two modes, Class Representative and Staff. A Class Representative
+    chooses their campus and fills in their Reg No, phone, and academic details &mdash; their login
+    email and password are generated automatically.
+  </p>
+  <div class="shot-wrap">
+    <img class="shot" src="{{REGISTER_CR_SHOT}}" alt="Class Representative registration form">
+  </div>
+  <p class="shot-caption">Figure 1 &mdash; Class Representative registration form</p>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <h2>9. How to Register &mdash; Staff</h2>
+  <p>
+    A Staff member switches to the Staff tab, then fills in their Staff ID/Payroll No and official
+    email instead of a Reg No and academic profile &mdash; their password is likewise generated
+    automatically and shown once on screen.
+  </p>
+  <div class="shot-wrap">
+    <img class="shot" src="{{REGISTER_STAFF_SHOT}}" alt="Staff registration form">
+  </div>
+  <p class="shot-caption">Figure 2 &mdash; Staff registration form</p>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+  <h2>10. Request for Review</h2>
   <p>
     Staff are kindly requested to review this proposal and the live system, and to provide
     feedback on its suitability for adoption across all campuses.

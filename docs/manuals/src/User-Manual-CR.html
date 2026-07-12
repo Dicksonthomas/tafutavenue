@@ -40,6 +40,9 @@ code { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:
 ul { margin:6px 0 12px 20px; padding:0; color:#334155; }
 li { margin-bottom:5px; }
 .small { font-size:8.5pt; color:#94a3b8; }
+.shot-wrap { margin: 10px 0; text-align: center; }
+img.shot { max-width: 100%; max-height: 640px; width: auto; border: 1px solid #cbd5e1; border-radius: 6px; }
+.shot-caption { font-size: 8.5pt; color:#94a3b8; text-align:center; margin-top: 6px; font-style: italic; }
 </style>
 </head>
 <body>
@@ -69,6 +72,16 @@ li { margin-bottom:5px; }
 
   <h2><span class="num">1.3</span>Dashboard</h2>
   <p>Your <b>Dashboard</b> is the first thing you see after logging in: a quick count of your bookings, what's coming up next, and a short activity feed covering your own actions plus other CRs' booking activity on your campus.</p>
+</div>
+
+<!-- ============ PAGE 1B ============ -->
+<div class="page">
+  <h2><span class="num">1.1</span>The Register page, step by step</h2>
+  <p>Choose <b>Class Representative</b> on the Register page, then fill in the numbered fields below. Your campus is chosen first, since it determines which Faculty/Department/Program options are offered.</p>
+  <div class="shot-wrap">
+    <img class="shot" src="{{REGISTER_CR_SHOT}}" alt="Class Representative registration form, annotated">
+  </div>
+  <p class="shot-caption">The Class Representative registration form.</p>
 </div>
 
 <!-- ============ PAGE 2 ============ -->
@@ -143,6 +156,16 @@ li { margin-bottom:5px; }
 
   <h2><span class="num">1.13</span>What Staff cannot see</h2>
   <p>Staff accounts never see CR/student data anywhere in the system &mdash; the sidebar, venues, bookings, and notifications a Staff member sees are all scoped to Staff activity only.</p>
+</div>
+
+<!-- ============ PAGE 3C ============ -->
+<div class="page">
+  <h2><span class="num">1.11</span>The Register page for Staff, step by step</h2>
+  <p>Switch to the <b>Staff</b> tab on the Register page, then fill in the numbered fields below &mdash; a Staff ID/Payroll No and official email take the place of a Reg No and academic profile.</p>
+  <div class="shot-wrap">
+    <img class="shot" src="{{REGISTER_STAFF_SHOT}}" alt="Staff registration form, annotated">
+  </div>
+  <p class="shot-caption">The Staff registration form.</p>
 </div>
 
 <!-- ============ PAGE 4 ============ -->
